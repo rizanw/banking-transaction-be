@@ -14,6 +14,7 @@ func main() {
 		err     error
 	)
 
+	_ = newRepo()
 	router := newRoutes()
 
 	srv := http.Server{
