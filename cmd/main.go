@@ -2,25 +2,36 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
+	"tx-bank/internal/config"
+)
+
+const (
+	appName = "tx-bank"
 )
 
 func main() {
 	var (
-		address = "0.0.0.0:8080"
+		address string
 		err     error
 	)
 
-	_ = newRepo()
+	conf, err := config.New(appName)
+	if err != nil {
+		return
+	}
+	_ = newRepo(conf)
 	router := newRoutes()
 
+	address = fmt.Sprintf("%s:%d", conf.Server.Host, conf.Server.Port)
 	srv := http.Server{
 		Addr:         address,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  time.Duration(conf.Server.ReadTimeout) * time.Second,
+		WriteTimeout: time.Duration(conf.Server.WriteTimeout) * time.Second,
 		Handler:      router,
 	}
 

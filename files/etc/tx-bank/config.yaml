@@ -1,0 +1,12 @@
+server:
+  host: localhost
+  port: 8080
+  write_timeout: 10
+  read_timeout: 10
+
+database:
+  host: localhost
+  port: 5656
+  db_name: txbank
+  user: txbank
+  password: txbank
