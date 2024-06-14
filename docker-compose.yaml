@@ -3,8 +3,8 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: txbank
       POSTGRES_DB: txbank
+      POSTGRES_USER: txbank
       POSTGRES_PASSWORD: txbank
       PGDATA: /var/lib/pg_data
     ports:

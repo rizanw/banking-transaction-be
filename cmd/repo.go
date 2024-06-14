@@ -8,7 +8,7 @@ import (
 )
 
 type Repo struct {
-	db rDB.DB
+	db rDB.Repo
 }
 
 func newRepo(conf *config.Config) *Repo {

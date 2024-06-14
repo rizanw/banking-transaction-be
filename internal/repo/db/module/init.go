@@ -9,23 +9,22 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type database struct {
+type repo struct {
 	db *sql.DB
 }
 
-func New(conf config.DBConfig) (rDB.DB, error) {
+func New(conf config.DBConfig) (rDB.Repo, error) {
 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", conf.Host, conf.Port, conf.User, conf.Password, conf.DBName)
 	db, err := sql.Open("postgres", psqlconn)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	if err = db.Ping(); err != nil {
 		return nil, err
 	}
 
-	return &database{
+	return &repo{
 		db: db,
 	}, nil
 }

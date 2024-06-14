@@ -17,6 +17,11 @@ func (h handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err = req.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	err = h.ucAuth.Register(req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
