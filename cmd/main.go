@@ -24,8 +24,9 @@ func main() {
 	if err != nil {
 		return
 	}
-	_ = newRepo(conf)
-	router := newRoutes()
+	repo := newRepo(conf)
+	uc := newUseCase(conf, repo)
+	router := newRoutes(uc)
 
 	address = fmt.Sprintf("%s:%d", conf.Server.Host, conf.Server.Port)
 	srv := http.Server{
