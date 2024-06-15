@@ -48,6 +48,14 @@ const qInsertTransaction = `
 	RETURNING id;
 `
 
+const qGetTransactions = `
+	SELECT 
+		"id", "ref_num", "amount_total", "record_total", "maker", "date", "status"
+	FROM 
+	    "transactions"
+	OFFSET $1 LIMIT $2;
+`
+
 const qFindTransaction = `
 	SELECT 
 		"id", "ref_num", "amount_total", "record_total", "maker", "date", "status"
