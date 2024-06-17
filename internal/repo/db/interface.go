@@ -10,6 +10,7 @@ import (
 type Repo interface {
 	InsertCorporate(in corporate.CorporateDB) (int64, error)
 	FindCorporate(id int64, accountNum string) (corporate.CorporateDB, error)
+	GetCorporates() ([]corporate.CorporateDB, error)
 	InsertUser(in user.UserDB) (int64, error)
 	FindUser(username, email string, id int64) (user.UserDB, error)
 	InsertTransaction(in transaction.TransactionDB) (int64, error)

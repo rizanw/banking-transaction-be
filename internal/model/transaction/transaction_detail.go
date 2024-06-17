@@ -32,6 +32,8 @@ type TransactionDetailResponse struct {
 	TransferDate    string              `json:"transfer_date"`
 	InstructionType string              `json:"instruction_type"`
 	Maker           string              `json:"maker"`
+	TotalAmount     float64             `json:"total_amount"`
+	TotalRecord     int32               `json:"total_record"`
 	Data            []TransactionDetail `json:"data"`
 	Total           int32               `json:"total"`
 	Page            int                 `json:"page"`

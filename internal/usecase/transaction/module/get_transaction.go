@@ -53,6 +53,8 @@ func (u *usecase) GetTransaction(in transaction.TransactionRequest) (transaction
 		TransferDate:    transac.CreatedAt.Format(time.RFC850),
 		InstructionType: transac.InstructionType,
 		Maker:           maker.Username,
+		TotalAmount:     transac.AmountTotal,
+		TotalRecord:     transac.RecordTotal,
 		Data:            trxDetails,
 		Total:           total,
 		Page:            in.Page,

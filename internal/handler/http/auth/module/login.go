@@ -9,6 +9,9 @@ import (
 func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 	var (
 		req auth.LoginRequest
+		res struct {
+			Message string `json:"message"`
+		}
 		err error
 	)
 	w.Header().Set("Content-Type", "application/json")
@@ -19,13 +22,17 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = req.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
+		res.Message = err.Error()
+		json.NewEncoder(w).Encode(res)
 		return
 	}
 
 	resp, err := h.ucAuth.Login(req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		res.Message = err.Error()
+		json.NewEncoder(w).Encode(res)
 		return
 	}
 

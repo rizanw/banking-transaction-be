@@ -1,5 +1,14 @@
 package module
 
+const qGetCorporates = `
+		SELECT 
+			"id",
+			"name",
+			"account_num"
+		FROM
+		    "corporates";
+`
+
 const qFindCorporate = `
 		SELECT 
 			"id",

@@ -7,13 +7,18 @@ import (
 	"tx-bank/internal/config"
 	hAuth "tx-bank/internal/handler/http/auth/module"
 	hTransaction "tx-bank/internal/handler/http/transaction/module"
+	hUtils "tx-bank/internal/handler/http/utils/module"
 	"tx-bank/internal/model/user"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
-func newRoutes(uc UseCase, conf *config.Config) *mux.Router {
+func newRoutes(uc UseCase, conf *config.Config) http.Handler {
 	router := mux.NewRouter()
+
+	handlerUtils := hUtils.New(uc.Utils)
+	router.HandleFunc("/api/corporates", handlerUtils.GetCorporates).Methods(http.MethodGet)
 
 	handlerAuth := hAuth.New(uc.Auth)
 	router.HandleFunc("/api/register", handlerAuth.Register).Methods(http.MethodPost)
@@ -41,5 +46,10 @@ func newRoutes(uc UseCase, conf *config.Config) *mux.Router {
 		w.WriteHeader(http.StatusOK)
 	}).Methods(http.MethodGet)
 
-	return router
+	// cors config
+	allowedHeaders := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	allowedMethods := handlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions})
+	allowedOrigins := handlers.AllowedOrigins([]string{"*"})
+
+	return handlers.CORS(allowedHeaders, allowedOrigins, allowedMethods)(router)
 }
