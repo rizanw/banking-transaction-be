@@ -1,6 +1,7 @@
 package db
 
 import (
+	"tx-bank/internal/model/auth"
 	"tx-bank/internal/model/corporate"
 	"tx-bank/internal/model/transactions"
 	"tx-bank/internal/model/user"
@@ -16,4 +17,7 @@ type Repo interface {
 	FindTransaction(transactionID int64) (transactions.TransactionDB, error)
 	InsertTransactionDetails(in []transactions.TransactionDetailDB) error
 	FindTransactionDetails(transactionID int64) ([]transactions.TransactionDetailDB, error)
+	InsertAuditLog(in transactions.AuditLogDB) (int64, error)
+	InsertOTP(in auth.OTP) error
+	FindOTP(code string, userID int64) (auth.OTP, error)
 }
