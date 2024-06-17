@@ -21,6 +21,8 @@ func (r *repo) FindTransaction(transactionID int64) (transaction.TransactionDB, 
 		&tx.Maker,
 		&tx.TxDate,
 		&tx.Status,
+		&tx.InstructionType,
+		&tx.CreatedAt,
 	); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return transaction.TransactionDB{}, err
 	}

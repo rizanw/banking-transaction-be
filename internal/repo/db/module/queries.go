@@ -37,7 +37,7 @@ const qFindUser = `
 		"corporate_id",
 		"role"
 	FROM "users" 
-	WHERE username = $1 OR email = $2;
+	WHERE username = $1 OR email = $2 OR id = $3;
 `
 
 const qInsertTransaction = `
@@ -58,7 +58,7 @@ const qGetTransactions = `
 
 const qFindTransaction = `
 	SELECT 
-		"id", "ref_num", "amount_total", "record_total", "maker", "date", "status"
+		"id", "ref_num", "amount_total", "record_total", "maker", "date", "status", "instruction_type", "created_at"
 	FROM 
 	    "transactions"
 	WHERE

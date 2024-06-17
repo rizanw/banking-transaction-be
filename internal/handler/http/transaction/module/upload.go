@@ -19,6 +19,8 @@ func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 		csvContent []transaction.UploadTransactionCSV
 	)
 
+	w.Header().Set("Content-Type", "application/json")
+
 	ses, ok := ctx.Value("session").(session.Session)
 	if ses.UserID == 0 || !ok {
 		http.Error(w, "user not login", http.StatusUnauthorized)
@@ -39,7 +41,6 @@ func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 	request.MakerRole = ses.Role
 	err = h.ucTransaction.UploadTransaction(request, csvContent)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(transaction.UploadTransactionResponse{
 			Message: err.Error(),

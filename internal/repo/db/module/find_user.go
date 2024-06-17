@@ -6,13 +6,13 @@ import (
 	"tx-bank/internal/model/user"
 )
 
-func (r *repo) FindUser(username, email string) (user.UserDB, error) {
+func (r *repo) FindUser(username, email string, id int64) (user.UserDB, error) {
 	var (
 		res user.UserDB
 		err error
 	)
 
-	row := r.db.QueryRow(qFindUser, username, email)
+	row := r.db.QueryRow(qFindUser, username, email, id)
 	if err = row.Scan(
 		&res.ID,
 		&res.Username,

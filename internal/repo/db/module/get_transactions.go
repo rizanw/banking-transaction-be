@@ -1,8 +1,10 @@
 package module
 
-import "tx-bank/internal/model/transaction"
+import (
+	"tx-bank/internal/model/transaction"
+)
 
-func (r *repo) GetTransactions(offset, limit int64) ([]transaction.TransactionDB, error) {
+func (r *repo) GetTransactions(offset, limit int) ([]transaction.TransactionDB, int32, error) {
 	var (
 		results []transaction.TransactionDB
 		err     error
@@ -21,10 +23,16 @@ func (r *repo) GetTransactions(offset, limit int64) ([]transaction.TransactionDB
 			&tx.Status,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		results = append(results, tx)
 	}
 
-	return results, err
+	var total int32
+	err = r.db.QueryRow("SELECT COUNT(*) FROM transactions").Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return results, total, err
 }

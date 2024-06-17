@@ -33,7 +33,7 @@ func (u usecase) Register(in auth.RegisterRequest) error {
 	}
 
 	// validate is user exist
-	if userData, err = u.db.FindUser(in.Username, in.Email); err != nil {
+	if userData, err = u.db.FindUser(in.Username, in.Email, 0); err != nil {
 		return err
 	} else if userData.ID != 0 {
 		return errors.New("user already exists")

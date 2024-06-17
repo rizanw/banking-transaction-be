@@ -18,7 +18,7 @@ func (u *usecase) Login(in auth.LoginRequest) (auth.LoginResponse, error) {
 	)
 
 	// find existing user
-	userData, err := u.db.FindUser(in.Username, "")
+	userData, err := u.db.FindUser(in.Username, "", 0)
 	if err != nil {
 		return res, err
 	}

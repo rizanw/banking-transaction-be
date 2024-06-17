@@ -2,7 +2,7 @@ package module
 
 import "tx-bank/internal/model/transaction"
 
-func (r *repo) FindTransactionDetails(transactionID int64) ([]transaction.TransactionDetailDB, error) {
+func (r *repo) FindTransactionDetails(transactionID int64) ([]transaction.TransactionDetailDB, int32, error) {
 	var (
 		results []transaction.TransactionDetailDB
 		err     error
@@ -22,10 +22,16 @@ func (r *repo) FindTransactionDetails(transactionID int64) ([]transaction.Transa
 			&detail.Status,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		results = append(results, detail)
 	}
 
-	return results, nil
+	var total int32
+	err = r.db.QueryRow("SELECT COUNT(*) FROM transaction_details").Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return results, total, nil
 }
