@@ -2,6 +2,11 @@ package transaction
 
 import "time"
 
+const (
+	AuditActionApprove = "approve"
+	AuditActionReject  = "reject"
+)
+
 type AuditLogDB struct {
 	ID            int64
 	TransactionID int64

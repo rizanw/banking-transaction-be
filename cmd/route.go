@@ -32,9 +32,9 @@ func newRoutes(uc UseCase, conf *config.Config) *mux.Router {
 	router.Handle("/api/transaction/{transactionID}",
 		middleware.VerifyAuth(&conf.JWT, []int32{user.RoleMaker, user.RoleApprover},
 			http.HandlerFunc(handlerTransaction.GetTransaction))).Methods(http.MethodGet)
-	router.Handle("/api/transaction/{transactionID}",
+	router.Handle("/api/transaction/{transactionID}/audit",
 		middleware.VerifyAuth(&conf.JWT, []int32{user.RoleApprover},
-			http.HandlerFunc(handlerTransaction.GetTransactions))).Methods(http.MethodPost)
+			http.HandlerFunc(handlerTransaction.AuditTransaction))).Methods(http.MethodPost)
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("server OK!")

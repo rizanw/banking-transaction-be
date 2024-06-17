@@ -28,7 +28,6 @@ func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	request, csvContent, err = parseUploadRequest(r)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(transaction.UploadTransactionResponse{
 			Message: err.Error(),

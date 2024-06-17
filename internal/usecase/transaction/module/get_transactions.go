@@ -10,7 +10,7 @@ func (u *usecase) GetTransactions(in transaction.TransactionRequest) (transactio
 		txData []transaction.Transaction
 	)
 
-	txs, total, err := u.db.GetTransactions(in.Page, in.PerPage)
+	txs, total, err := u.db.GetTransactions((in.Page-1)*in.PerPage, in.PerPage)
 	if err != nil {
 		return transaction.TransactionResponse{}, err
 	}

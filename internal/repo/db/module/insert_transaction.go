@@ -15,6 +15,7 @@ func (r *repo) InsertTransaction(in transaction.TransactionDB) (int64, error) {
 		in.Maker,
 		in.TxDate,
 		in.Status,
+		in.InstructionType,
 	).Scan(&transactionID)
 	if err != nil {
 		return 0, err

@@ -42,9 +42,9 @@ const qFindUser = `
 
 const qInsertTransaction = `
 	INSERT INTO "transactions"
-		("ref_num", "amount_total", "record_total", "maker", "date", "status")
+		("ref_num", "amount_total", "record_total", "maker", "date", "status", "instruction_type")
 	VALUES 
-		($1,$2,$3,$4,$5,$6)
+		($1,$2,$3,$4,$5,$6,$7)
 	RETURNING id;
 `
 
@@ -65,6 +65,12 @@ const qFindTransaction = `
 	    "id" = $1;
 `
 
+const qUpdateTransaction = `
+	UPDATE "transactions"
+	SET "status" = $1, "updated_at" = $2
+	WHERE "id" = $3
+`
+
 const (
 	qInsertTransactionDetails = `
 		INSERT INTO "transaction_details"
@@ -81,6 +87,12 @@ const qFindTransactionDetails = `
 	    "transaction_details"
 	WHERE
 	    "transaction_id" = $1;
+`
+
+const qUpdateTransactionDetailStatus = `
+	UPDATE "transaction_details" 
+	SET "status" = $1, "updated_at" = $2 
+	WHERE "transaction_id" = $3;
 `
 
 const qInsertAuditLog = `

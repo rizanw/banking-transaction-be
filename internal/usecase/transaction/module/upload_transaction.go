@@ -40,12 +40,13 @@ func (u *usecase) UploadTransaction(in transaction.UploadTransactionRequest, csv
 
 	// insert transaction
 	txID, err := u.db.InsertTransaction(transaction.TransactionDB{
-		RefNum:      strings.ReplaceAll(uuid.New().String(), "-", ""),
-		AmountTotal: csvTotalAmount,
-		RecordTotal: csvTotalRecords,
-		Maker:       in.MakerID,
-		TxDate:      transactionDate,
-		Status:      status,
+		RefNum:          strings.ReplaceAll(uuid.New().String(), "-", ""),
+		AmountTotal:     csvTotalAmount,
+		RecordTotal:     csvTotalRecords,
+		Maker:           in.MakerID,
+		TxDate:          transactionDate,
+		Status:          status,
+		InstructionType: in.InstructionType,
 	})
 	if err != nil {
 		return err

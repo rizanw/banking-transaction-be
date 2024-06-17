@@ -15,8 +15,10 @@ type Repo interface {
 	InsertTransaction(in transaction.TransactionDB) (int64, error)
 	GetTransactions(offset, limit int) ([]transaction.TransactionDB, int32, error)
 	FindTransaction(transactionID int64) (transaction.TransactionDB, error)
+	UpdateTransaction(transaction transaction.TransactionDB) error
 	InsertTransactionDetails(in []transaction.TransactionDetailDB) error
 	FindTransactionDetails(transactionID int64) ([]transaction.TransactionDetailDB, int32, error)
+	UpdateTransactionDetailStatus(trxID int64, status int32) error
 	InsertAuditLog(in transaction.AuditLogDB) (int64, error)
 	InsertOTP(in auth.OTP) error
 	FindOTP(code string, userID int64) (auth.OTP, error)
