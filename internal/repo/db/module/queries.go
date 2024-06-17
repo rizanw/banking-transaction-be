@@ -8,7 +8,7 @@ const qFindCorporate = `
 		FROM
 		    "corporates"
 		WHERE
-		    account_num=$1;
+		    account_num=$1 OR id=$2;
 `
 
 const qInsertCorporate = `

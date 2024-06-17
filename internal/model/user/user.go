@@ -9,3 +9,10 @@ type UserDB struct {
 	CorporateID int64  `db:"corporate_id"`
 	Role        int32  `db:"role"`
 }
+
+type User struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Phone    string `json:"phone"`
+	Role     int32  `json:"role"`
+}

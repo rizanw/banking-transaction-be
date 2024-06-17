@@ -5,6 +5,8 @@ import (
 	"tx-bank/internal/model/auth"
 	"tx-bank/internal/model/corporate"
 	"tx-bank/internal/model/user"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func (u usecase) Register(in auth.RegisterRequest) error {
@@ -24,7 +26,7 @@ func (u usecase) Register(in auth.RegisterRequest) error {
 	// TODO: validate OTP here
 
 	// validate and corporate data
-	if corpData, err = u.db.FindCorporate(in.CorporateAccountNumber); err != nil {
+	if corpData, err = u.db.FindCorporate(0, in.CorporateAccountNumber); err != nil {
 		return err
 	} else if corpData.ID == 0 {
 		return errors.New("corporate not found")
@@ -37,12 +39,16 @@ func (u usecase) Register(in auth.RegisterRequest) error {
 		return errors.New("user already exists")
 	}
 
-	// TODO: hash password here
+	// hash password
+	pwd, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
 
 	// add new user
 	userData = user.UserDB{
 		Username:    in.Username,
-		Password:    in.Password,
+		Password:    string(pwd),
 		Email:       in.Email,
 		Phone:       in.Phone,
 		CorporateID: corpData.ID,

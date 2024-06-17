@@ -22,6 +22,9 @@ func New(appName string) (*Config, error) {
 		return nil, err
 	}
 
+	// random jwt secret key
+	cfg.JWT.Secret = make([]byte, 14)
+
 	return &cfg, nil
 }
 

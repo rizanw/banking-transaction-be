@@ -13,6 +13,7 @@ func newRoutes(uc UseCase) *mux.Router {
 
 	handlerAuth := hAuth.New(uc.Auth)
 	router.HandleFunc("/api/register", handlerAuth.Register).Methods(http.MethodPost)
+	router.HandleFunc("/api/login", handlerAuth.Login).Methods(http.MethodPost)
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("server OK!")

@@ -3,6 +3,7 @@ package config
 type Config struct {
 	Server   Server   `yaml:"server"`
 	Database DBConfig `yaml:"database"`
+	JWT      JWTConfig
 }
 
 type Server struct {
@@ -18,4 +19,8 @@ type DBConfig struct {
 	DBName   string `yaml:"db_name"`
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
+}
+
+type JWTConfig struct {
+	Secret []byte
 }
