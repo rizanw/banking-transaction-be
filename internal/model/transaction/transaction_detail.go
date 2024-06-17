@@ -1,4 +1,4 @@
-package transactions
+package transaction
 
 type TransactionDetailDB struct {
 	ID              int64   `db:"id"`

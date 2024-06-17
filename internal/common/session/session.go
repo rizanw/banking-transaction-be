@@ -6,6 +6,7 @@ var Sessions = map[string]Session{}
 
 type Session struct {
 	UserID int64
+	Role   int32
 	Email  string
 	Expiry int64
 }

@@ -10,6 +10,7 @@ func (u *usecase) generateToken(s session.Session) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": s.UserID,
 		"email":   s.Email,
+		"role":    s.Role,
 		"exp":     s.Expiry,
 	})
 

@@ -3,12 +3,12 @@ package module
 import (
 	"database/sql"
 	"errors"
-	"tx-bank/internal/model/transactions"
+	"tx-bank/internal/model/transaction"
 )
 
-func (r *repo) FindTransaction(transactionID int64) (transactions.TransactionDB, error) {
+func (r *repo) FindTransaction(transactionID int64) (transaction.TransactionDB, error) {
 	var (
-		tx  transactions.TransactionDB
+		tx  transaction.TransactionDB
 		err error
 	)
 
@@ -22,7 +22,7 @@ func (r *repo) FindTransaction(transactionID int64) (transactions.TransactionDB,
 		&tx.TxDate,
 		&tx.Status,
 	); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return transactions.TransactionDB{}, err
+		return transaction.TransactionDB{}, err
 	}
 
 	return tx, nil

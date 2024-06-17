@@ -1,16 +1,16 @@
 package module
 
-import "tx-bank/internal/model/transactions"
+import "tx-bank/internal/model/transaction"
 
-func (r *repo) FindTransactionDetails(transactionID int64) ([]transactions.TransactionDetailDB, error) {
+func (r *repo) FindTransactionDetails(transactionID int64) ([]transaction.TransactionDetailDB, error) {
 	var (
-		results []transactions.TransactionDetailDB
+		results []transaction.TransactionDetailDB
 		err     error
 	)
 
 	rows, err := r.db.Query(qFindTransactionDetails, transactionID)
 	for rows.Next() {
-		var detail transactions.TransactionDetailDB
+		var detail transaction.TransactionDetailDB
 		err = rows.Scan(
 			&detail.ID,
 			&detail.TransactionID,

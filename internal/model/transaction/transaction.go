@@ -1,6 +1,13 @@
-package transactions
+package transaction
 
 import "time"
+
+const (
+	StatusNone = iota
+	StatusAwaitingApproval
+	StatusApproved
+	StatusRejected
+)
 
 type TransactionDB struct {
 	ID          int64     `db:"id"`

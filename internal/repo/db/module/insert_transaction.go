@@ -1,8 +1,8 @@
 package module
 
-import "tx-bank/internal/model/transactions"
+import "tx-bank/internal/model/transaction"
 
-func (r *repo) InsertTransaction(in transactions.TransactionDB) (int64, error) {
+func (r *repo) InsertTransaction(in transaction.TransactionDB) (int64, error) {
 	var (
 		transactionID int64
 		err           error

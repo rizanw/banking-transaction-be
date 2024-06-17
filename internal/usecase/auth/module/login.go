@@ -34,6 +34,7 @@ func (u *usecase) Login(in auth.LoginRequest) (auth.LoginResponse, error) {
 	// generate token
 	token, err := u.generateToken(session.Session{
 		UserID: userData.ID,
+		Role:   userData.Role,
 		Email:  userData.Email,
 		Expiry: now.Add(24 * time.Hour).Unix(),
 	})

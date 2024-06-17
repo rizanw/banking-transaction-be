@@ -3,7 +3,7 @@ package db
 import (
 	"tx-bank/internal/model/auth"
 	"tx-bank/internal/model/corporate"
-	"tx-bank/internal/model/transactions"
+	"tx-bank/internal/model/transaction"
 	"tx-bank/internal/model/user"
 )
 
@@ -12,12 +12,12 @@ type Repo interface {
 	FindCorporate(id int64, accountNum string) (corporate.CorporateDB, error)
 	InsertUser(in user.UserDB) (int64, error)
 	FindUser(username, email string) (user.UserDB, error)
-	InsertTransaction(in transactions.TransactionDB) (int64, error)
-	GetTransactions(offset, limit int64) ([]transactions.TransactionDB, error)
-	FindTransaction(transactionID int64) (transactions.TransactionDB, error)
-	InsertTransactionDetails(in []transactions.TransactionDetailDB) error
-	FindTransactionDetails(transactionID int64) ([]transactions.TransactionDetailDB, error)
-	InsertAuditLog(in transactions.AuditLogDB) (int64, error)
+	InsertTransaction(in transaction.TransactionDB) (int64, error)
+	GetTransactions(offset, limit int64) ([]transaction.TransactionDB, error)
+	FindTransaction(transactionID int64) (transaction.TransactionDB, error)
+	InsertTransactionDetails(in []transaction.TransactionDetailDB) error
+	FindTransactionDetails(transactionID int64) ([]transaction.TransactionDetailDB, error)
+	InsertAuditLog(in transaction.AuditLogDB) (int64, error)
 	InsertOTP(in auth.OTP) error
 	FindOTP(code string, userID int64) (auth.OTP, error)
 }

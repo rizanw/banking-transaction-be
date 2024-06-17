@@ -1,8 +1,8 @@
 package module
 
-import "tx-bank/internal/model/transactions"
+import "tx-bank/internal/model/transaction"
 
-func (r *repo) InsertAuditLog(in transactions.AuditLogDB) (int64, error) {
+func (r *repo) InsertAuditLog(in transaction.AuditLogDB) (int64, error) {
 	var (
 		id  int64
 		err error

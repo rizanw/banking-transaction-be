@@ -26,7 +26,7 @@ func main() {
 	}
 	repo := newRepo(conf)
 	uc := newUseCase(conf, repo)
-	router := newRoutes(uc)
+	router := newRoutes(uc, conf)
 
 	address = fmt.Sprintf("%s:%d", conf.Server.Host, conf.Server.Port)
 	srv := http.Server{

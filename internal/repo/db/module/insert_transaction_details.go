@@ -2,10 +2,10 @@ package module
 
 import (
 	"fmt"
-	"tx-bank/internal/model/transactions"
+	"tx-bank/internal/model/transaction"
 )
 
-func (r *repo) InsertTransactionDetails(in []transactions.TransactionDetailDB) error {
+func (r *repo) InsertTransactionDetails(in []transaction.TransactionDetailDB) error {
 	var (
 		query  string
 		params []interface{}
@@ -13,12 +13,15 @@ func (r *repo) InsertTransactionDetails(in []transactions.TransactionDetailDB) e
 	)
 
 	query, params = buildQueryInsertTransactionDetails(in)
-	r.db.QueryRow(query, params...)
+	_, err = r.db.Exec(query, params...)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
 
-func buildQueryInsertTransactionDetails(in []transactions.TransactionDetailDB) (string, []interface{}) {
+func buildQueryInsertTransactionDetails(in []transaction.TransactionDetailDB) (string, []interface{}) {
 	var (
 		query  string = qInsertTransactionDetails
 		params []interface{}
@@ -28,7 +31,7 @@ func buildQueryInsertTransactionDetails(in []transactions.TransactionDetailDB) (
 	for _, row := range in {
 		query += fmt.Sprintf(
 			qInsertTransactionDetailsValues,
-			offset+1, offset+2, offset+3, offset+4, offset+5, offset+6,
+			offset+1, offset+2, offset+3, offset+4, offset+5, offset+6, offset+7,
 		)
 
 		params = append(params,
@@ -41,7 +44,7 @@ func buildQueryInsertTransactionDetails(in []transactions.TransactionDetailDB) (
 			row.Status,
 		)
 
-		offset += 6
+		offset += 7
 	}
 
 	query = query[0 : len(query)-1]

@@ -71,7 +71,7 @@ const (
 			("transaction_id", "to_account_num", "to_account_name", "to_account_bank", "amount", "description", "status")
 		VALUES
 	`
-	qInsertTransactionDetailsValues = "($%d, $%d, $%d, $%d, $%d, $%d),"
+	qInsertTransactionDetailsValues = "($%d, $%d, $%d, $%d, $%d, $%d, $%d),"
 )
 
 const qFindTransactionDetails = `
