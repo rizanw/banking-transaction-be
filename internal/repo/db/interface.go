@@ -23,5 +23,5 @@ type Repo interface {
 	UpdateTransactionDetailStatus(trxID int64, status int32) error
 	InsertAuditLog(in transaction.AuditLogDB) (int64, error)
 	InsertOTP(in auth.OTP) error
-	FindOTP(code string, userID int64) (auth.OTP, error)
+	FindOTP(email, code string) (auth.OTP, error)
 }

@@ -25,6 +25,12 @@ func New(appName string) (*Config, error) {
 	// random jwt secret key
 	cfg.JWT.Secret = make([]byte, 14)
 
+	// replace smtp yaml secret
+	if cfg.SMTP.Username == cfg.SMTP.Password {
+		cfg.SMTP.Username = os.Getenv("EMAIL")
+		cfg.SMTP.Password = os.Getenv("EMAIL_PASSWORD")
+	}
+
 	return &cfg, nil
 }
 

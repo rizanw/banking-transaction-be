@@ -119,15 +119,15 @@ const qInsertAuditLog = `
 
 const qInsertOTP = `
 	INSERT INTO "otps"
-		("user_id", "code", "expires_at")
+		("email", "code", "expires_at")
 	VALUES 
 		($1,$2,$3);
 `
 
 const qFindOTP = `
 	SELECT 
-	    ("id", "user_id", "code", "expires_at")
+	    "id", "email", "code", "expires_at"
 	FROM "otps"
 	WHERE
-	    user_id = $1 AND code = $2;
+	    email = $1 AND code = $2;
 `

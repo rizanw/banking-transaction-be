@@ -2,6 +2,7 @@ package module
 
 import (
 	"errors"
+	"time"
 	"tx-bank/internal/model/auth"
 	"tx-bank/internal/model/corporate"
 	"tx-bank/internal/model/user"
@@ -11,6 +12,7 @@ import (
 
 func (u usecase) Register(in auth.RegisterRequest) error {
 	var (
+		now      = time.Now()
 		err      error
 		corpData corporate.CorporateDB
 		userData user.UserDB = user.UserDB{
@@ -23,7 +25,14 @@ func (u usecase) Register(in auth.RegisterRequest) error {
 		return err
 	}
 
-	// TODO: validate OTP here
+	// validate otp
+	if otpData, err := u.db.FindOTP(in.Email, in.Code); err != nil {
+		return err
+	} else if otpData.ID == 0 {
+		return errors.New("OTP code is invalid")
+	} else if now.After(otpData.Expire) {
+		return errors.New("OTP code is expired")
+	}
 
 	// validate and corporate data
 	if corpData, err = u.db.FindCorporate(0, in.CorporateAccountNumber); err != nil {

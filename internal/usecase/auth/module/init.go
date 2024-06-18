@@ -7,13 +7,15 @@ import (
 )
 
 type usecase struct {
-	db      rDB.Repo
-	confJWT config.JWTConfig
+	db       rDB.Repo
+	confJWT  config.JWTConfig
+	confSMTP config.SMTPConfig
 }
 
-func New(db rDB.Repo, confJWT config.JWTConfig) ucAuth.UseCase {
+func New(db rDB.Repo, confJWT config.JWTConfig, confSMTP config.SMTPConfig) ucAuth.UseCase {
 	return &usecase{
-		db:      db,
-		confJWT: confJWT,
+		db:       db,
+		confJWT:  confJWT,
+		confSMTP: confSMTP,
 	}
 }

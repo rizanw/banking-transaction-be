@@ -21,6 +21,7 @@ func newRoutes(uc UseCase, conf *config.Config) http.Handler {
 	router.HandleFunc("/api/corporates", handlerUtils.GetCorporates).Methods(http.MethodGet)
 
 	handlerAuth := hAuth.New(uc.Auth)
+	router.HandleFunc("/api/send-otp", handlerAuth.SendOTP).Methods(http.MethodPost)
 	router.HandleFunc("/api/register", handlerAuth.Register).Methods(http.MethodPost)
 	router.HandleFunc("/api/login", handlerAuth.Login).Methods(http.MethodPost)
 	router.Handle("/api/logout",

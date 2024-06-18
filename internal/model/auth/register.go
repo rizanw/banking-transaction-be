@@ -11,6 +11,7 @@ type RegisterRequest struct {
 	Email                  string `json:"email"`
 	Phone                  string `json:"phone"`
 	Role                   int32  `json:"role"`
+	Code                   string `json:"code"`
 	CorporateAccountNumber string `json:"corporate_account_number"`
 }
 
@@ -53,6 +54,14 @@ func (r *RegisterRequest) Validate() error {
 	}
 	if !reNumeric.MatchString(r.CorporateAccountNumber) {
 		return errors.New("corporate account number contains invalid characters")
+	}
+
+	// validate otp code
+	if len(r.Code) != 6 {
+		return errors.New("otp code is required")
+	}
+	if !reNumeric.MatchString(r.Code) {
+		return errors.New("otp code contains invalid characters")
 	}
 
 	return nil

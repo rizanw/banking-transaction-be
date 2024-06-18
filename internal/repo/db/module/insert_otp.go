@@ -10,7 +10,7 @@ func (r *repo) InsertOTP(in auth.OTP) error {
 	)
 
 	if _, err = r.db.Exec(qInsertOTP,
-		in.UserID,
+		in.Email,
 		in.Code,
 		in.Expire,
 	); err != nil {

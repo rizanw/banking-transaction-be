@@ -10,3 +10,9 @@ database:
   db_name: txbank
   user: txbank
   password: txbank
+
+smtp_server:
+  host: smtp.gmail.com
+  port: 587
+  username: secret
+  password: secret

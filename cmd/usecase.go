@@ -18,7 +18,7 @@ type UseCase struct {
 
 func newUseCase(conf *config.Config, repo *Repo) UseCase {
 	return UseCase{
-		Auth:        ucAuth.New(repo.db, conf.JWT),
+		Auth:        ucAuth.New(repo.db, conf.JWT, conf.SMTP),
 		Transaction: ucTransaction.New(repo.db),
 		Utils:       ucUtils.New(repo.db),
 	}

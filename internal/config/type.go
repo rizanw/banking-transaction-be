@@ -1,8 +1,9 @@
 package config
 
 type Config struct {
-	Server   Server   `yaml:"server"`
-	Database DBConfig `yaml:"database"`
+	Server   Server     `yaml:"server"`
+	Database DBConfig   `yaml:"database"`
+	SMTP     SMTPConfig `yaml:"smtp_server"`
 	JWT      JWTConfig
 }
 
@@ -23,4 +24,11 @@ type DBConfig struct {
 
 type JWTConfig struct {
 	Secret []byte
+}
+
+type SMTPConfig struct {
+	Host     string `yaml:"host"`
+	Port     int32  `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }

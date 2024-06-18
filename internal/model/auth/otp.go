@@ -4,7 +4,7 @@ import "time"
 
 type OTP struct {
 	ID     int64     `db:"id"`
-	UserID int64     `db:"user_id"`
+	Email  string    `db:"email"`
 	Code   string    `db:"code"`
 	Expire time.Time `db:"expires_at"`
 }
