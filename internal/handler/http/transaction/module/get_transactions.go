@@ -10,6 +10,7 @@ import (
 func (h *handler) GetTransactions(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
+		ctx = r.Context()
 		req transaction.TransactionRequest
 		res transaction.TransactionResponse
 	)
@@ -17,7 +18,7 @@ func (h *handler) GetTransactions(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	req = parseGetTransactions(r)
-	res, err = h.ucTransaction.GetTransactions(req)
+	res, err = h.ucTransaction.GetTransactions(ctx, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

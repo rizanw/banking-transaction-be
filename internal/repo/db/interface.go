@@ -14,7 +14,7 @@ type Repo interface {
 	InsertUser(in user.UserDB) (int64, error)
 	FindUser(username, email string, id int64) (user.UserDB, error)
 	InsertTransaction(in transaction.TransactionDB) (int64, error)
-	GetTransactions(offset, limit int) ([]transaction.TransactionDB, int32, error)
+	GetTransactions(status, offset, limit int) ([]transaction.TransactionDB, int32, error)
 	FindTransaction(transactionID int64) (transaction.TransactionDB, error)
 	UpdateTransaction(transaction transaction.TransactionDB) error
 	InsertTransactionDetails(in []transaction.TransactionDetailDB) error

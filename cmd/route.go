@@ -23,6 +23,9 @@ func newRoutes(uc UseCase, conf *config.Config) http.Handler {
 	handlerAuth := hAuth.New(uc.Auth)
 	router.HandleFunc("/api/register", handlerAuth.Register).Methods(http.MethodPost)
 	router.HandleFunc("/api/login", handlerAuth.Login).Methods(http.MethodPost)
+	router.Handle("/api/logout",
+		middleware.VerifyAuth(&conf.JWT, []int32{user.RoleMaker, user.RoleApprover},
+			http.HandlerFunc(handlerAuth.Logout))).Methods(http.MethodPost)
 
 	handlerTransaction := hTransaction.New(uc.Transaction)
 	router.Handle("/api/transaction/download-template",

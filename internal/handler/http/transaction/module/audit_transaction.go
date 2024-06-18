@@ -3,6 +3,7 @@ package module
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"tx-bank/internal/model/transaction"
@@ -36,6 +37,7 @@ func (h *handler) AuditTransaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	res.Message = fmt.Sprintf("successfully %sed", action)
 	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

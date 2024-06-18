@@ -62,7 +62,6 @@ const qGetTransactions = `
 		"id", "ref_num", "amount_total", "record_total", "maker", "date", "status"
 	FROM 
 	    "transactions"
-	OFFSET $1 LIMIT $2;
 `
 
 const qFindTransaction = `

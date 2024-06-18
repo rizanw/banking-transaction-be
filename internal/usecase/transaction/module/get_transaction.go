@@ -1,7 +1,6 @@
 package module
 
 import (
-	"time"
 	"tx-bank/internal/model/transaction"
 )
 
@@ -49,8 +48,8 @@ func (u *usecase) GetTransaction(in transaction.TransactionRequest) (transaction
 		ID:              in.TransactionID,
 		RefNum:          transac.RefNum,
 		FromAccountNum:  corp.AccountNum,
-		SubmitDateTime:  transac.CreatedAt.Format(time.RFC850),
-		TransferDate:    transac.CreatedAt.Format(time.RFC850),
+		SubmitDateTime:  transac.CreatedAt.Format(layoutDateTime),
+		TransferDate:    transac.TxDate.Format(layoutDateTime),
 		InstructionType: transac.InstructionType,
 		Maker:           maker.Username,
 		TotalAmount:     transac.AmountTotal,

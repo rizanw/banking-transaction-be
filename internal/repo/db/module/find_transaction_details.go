@@ -28,7 +28,10 @@ func (r *repo) FindTransactionDetails(transactionID int64) ([]transaction.Transa
 	}
 
 	var total int32
-	err = r.db.QueryRow("SELECT COUNT(*) FROM transaction_details").Scan(&total)
+	err = r.db.QueryRow(
+		"SELECT COUNT(*) FROM transaction_details WHERE transaction_id=$1",
+		transactionID,
+	).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}

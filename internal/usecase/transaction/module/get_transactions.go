@@ -1,16 +1,24 @@
 package module
 
 import (
-	"time"
+	"context"
+	"tx-bank/internal/common/session"
 	"tx-bank/internal/model/transaction"
+	"tx-bank/internal/model/user"
 )
 
-func (u *usecase) GetTransactions(in transaction.TransactionRequest) (transaction.TransactionResponse, error) {
+func (u *usecase) GetTransactions(ctx context.Context, in transaction.TransactionRequest) (transaction.TransactionResponse, error) {
 	var (
-		txData []transaction.Transaction
+		ses              = ctx.Value("session").(session.Session)
+		filterStatus int = -1
+		txData       []transaction.Transaction
 	)
 
-	txs, total, err := u.db.GetTransactions((in.Page-1)*in.PerPage, in.PerPage)
+	if ses.Role == user.RoleApprover {
+		filterStatus = transaction.StatusAwaitingApproval
+	}
+
+	txs, total, err := u.db.GetTransactions(filterStatus, (in.Page-1)*in.PerPage, in.PerPage)
 	if err != nil {
 		return transaction.TransactionResponse{}, err
 	}
@@ -40,7 +48,7 @@ func (u *usecase) GetTransactions(in transaction.TransactionRequest) (transactio
 			TotalTransferRecord: tx.RecordTotal,
 			FromAccountNo:       corp.AccountNum,
 			Maker:               maker.Username,
-			TransferDate:        tx.TxDate.Format(time.RFC850),
+			TransferDate:        tx.TxDate.Format(layoutDateTime),
 			Status:              tx.GetStatusName(),
 		})
 	}
