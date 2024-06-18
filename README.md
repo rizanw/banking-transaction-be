@@ -9,7 +9,7 @@ approve or reject the transaction.
 beside that the registration is also using otp verification code send by email. and many more features inside! kindly
 check!
 
-for the frontend please check: https://github.com/rizanw/banking-transaction-be
+for the frontend please check: https://github.com/rizanw/banking-transaction-fe
 
 ## Features
 
