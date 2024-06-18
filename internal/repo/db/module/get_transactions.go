@@ -2,18 +2,24 @@ package module
 
 import (
 	"fmt"
+	"strings"
 	"tx-bank/internal/model/transaction"
+
+	"github.com/lib/pq"
 )
 
-func (r *repo) GetTransactions(status, offset, limit int) ([]transaction.TransactionDB, int32, error) {
+func (r *repo) GetTransactions(filter transaction.TransactionFilter, offset, limit int) ([]transaction.TransactionDB, int32, error) {
 	var (
 		results []transaction.TransactionDB
 		query   string
 		err     error
 	)
 
-	query, params := buildQueryGetTransactions(status, offset, limit)
+	query, whereList, whereParam, params := buildQueryGetTransactions(filter, offset, limit)
 	rows, err := r.db.Query(query, params...)
+	if err != nil {
+		return nil, 0, err
+	}
 	for rows.Next() {
 		var tx transaction.TransactionDB
 		err = rows.Scan(
@@ -34,11 +40,10 @@ func (r *repo) GetTransactions(status, offset, limit int) ([]transaction.Transac
 	var total int32
 	params = []interface{}{}
 	query = "SELECT COUNT(*) FROM transactions"
-	if status > 0 {
-		query += " WHERE status=$1;"
-		params = append(params, status)
+	if len(whereList) > 0 {
+		query = query + " WHERE " + strings.Join(whereList, " AND ")
 	}
-	err = r.db.QueryRow(query, params...).Scan(&total)
+	err = r.db.QueryRow(query, whereParam...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -46,19 +51,42 @@ func (r *repo) GetTransactions(status, offset, limit int) ([]transaction.Transac
 	return results, total, err
 }
 
-func buildQueryGetTransactions(status, offset, limit int) (string, []interface{}) {
+func buildQueryGetTransactions(filter transaction.TransactionFilter, offset, limit int) (string, []string, []interface{}, []interface{}) {
 	var (
 		query       string = qGetTransactions
+		whereList   []string
+		whereParams []interface{}
 		params      []interface{}
 		countParams int = 1
 	)
 
-	if status > 0 {
-		query = query + fmt.Sprintf(" WHERE status = $%d", countParams)
-		params = append(params, status)
+	if filter.Status > 0 {
+		whereList = append(whereList, fmt.Sprintf("status=$%d", countParams))
+		params = append(params, filter.Status)
 		countParams++
 	}
-	if offset > 0 {
+	if len(filter.Makers) > 0 {
+		whereList = append(whereList, fmt.Sprintf(`maker=ANY($%d)`, countParams))
+		params = append(params, pq.Array(filter.Makers))
+		countParams++
+	}
+	if !filter.StartDate.IsZero() {
+		whereList = append(whereList, fmt.Sprintf("date>=$%d", countParams))
+		params = append(params, filter.StartDate)
+		countParams++
+	}
+	if !filter.EndDate.IsZero() {
+		whereList = append(whereList, fmt.Sprintf("date<$%d", countParams))
+		params = append(params, filter.EndDate)
+		countParams++
+	}
+	if len(whereList) > 0 {
+		query = query + " WHERE " + strings.Join(whereList, " AND ")
+		whereParams = append(whereParams, params...)
+	}
+
+	query = query + " ORDER BY date DESC"
+	if offset >= 0 {
 		query = query + fmt.Sprintf(" OFFSET $%d", countParams)
 		params = append(params, offset)
 		countParams++
@@ -69,5 +97,5 @@ func buildQueryGetTransactions(status, offset, limit int) (string, []interface{}
 		countParams++
 	}
 
-	return query, params
+	return query, whereList, whereParams, params
 }

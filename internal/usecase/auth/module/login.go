@@ -18,13 +18,14 @@ func (u *usecase) Login(in auth.LoginRequest) (auth.LoginResponse, error) {
 	)
 
 	// find existing user
-	userData, err := u.db.FindUser(in.Username, "", 0)
+	users, err := u.db.FindUsers(in.Username, "", 0, 0)
 	if err != nil {
 		return res, err
 	}
-	if userData.ID == 0 {
+	if len(users) == 0 {
 		return res, errors.New("user not found")
 	}
+	userData := users[0]
 
 	// compare hashed password
 	if err = bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(in.Password)); err != nil {

@@ -18,10 +18,11 @@ func (u *usecase) GetTransaction(in transaction.TransactionRequest) (transaction
 		return transaction.TransactionDetailResponse{}, nil
 	}
 
-	maker, err := u.db.FindUser("", "", transac.Maker)
-	if err != nil {
+	makers, err := u.db.FindUsers("", "", transac.Maker, 0)
+	if err != nil || len(makers) == 0 {
 		return transaction.TransactionDetailResponse{}, err
 	}
+	maker := makers[0]
 
 	corp, err := u.db.FindCorporate(maker.CorporateID, "")
 	if err != nil {

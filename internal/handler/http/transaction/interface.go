@@ -8,4 +8,5 @@ type Handler interface {
 	GetTransactions(w http.ResponseWriter, r *http.Request)
 	GetTransaction(w http.ResponseWriter, r *http.Request)
 	AuditTransaction(w http.ResponseWriter, r *http.Request)
+	GetTransactionStats(w http.ResponseWriter, r *http.Request)
 }

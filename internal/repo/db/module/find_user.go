@@ -6,23 +6,27 @@ import (
 	"tx-bank/internal/model/user"
 )
 
-func (r *repo) FindUser(username, email string, id int64) (user.UserDB, error) {
+func (r *repo) FindUsers(username, email string, id, corpId int64) ([]user.UserDB, error) {
 	var (
-		res user.UserDB
+		res []user.UserDB
 		err error
 	)
 
-	row := r.db.QueryRow(qFindUser, username, email, id)
-	if err = row.Scan(
-		&res.ID,
-		&res.Username,
-		&res.Password,
-		&res.Email,
-		&res.Phone,
-		&res.CorporateID,
-		&res.Role,
-	); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return user.UserDB{}, err
+	rows, err := r.db.Query(qFindUser, username, email, id, corpId)
+	for rows.Next() {
+		var usr user.UserDB
+		if err = rows.Scan(
+			&usr.ID,
+			&usr.Username,
+			&usr.Password,
+			&usr.Email,
+			&usr.Phone,
+			&usr.CorporateID,
+			&usr.Role,
+		); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return []user.UserDB{}, err
+		}
+		res = append(res, usr)
 	}
 
 	return res, nil

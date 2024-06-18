@@ -33,10 +33,19 @@ func (t TransactionDB) GetStatusName() string {
 	return ""
 }
 
+type TransactionFilter struct {
+	Status      int
+	Makers      []int64
+	CorporateID int64
+	StartDate   time.Time
+	EndDate     time.Time
+}
+
 type TransactionRequest struct {
 	TransactionID int64
 	Page          int
 	PerPage       int
+	Filter        TransactionFilter
 }
 
 type TransactionResponse struct {

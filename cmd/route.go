@@ -37,6 +37,9 @@ func newRoutes(uc UseCase, conf *config.Config) http.Handler {
 	router.Handle("/api/transactions",
 		middleware.VerifyAuth(&conf.JWT, []int32{user.RoleMaker, user.RoleApprover},
 			http.HandlerFunc(handlerTransaction.GetTransactions))).Methods(http.MethodGet)
+	router.Handle("/api/transactions/stats",
+		middleware.VerifyAuth(&conf.JWT, []int32{user.RoleMaker, user.RoleApprover},
+			http.HandlerFunc(handlerTransaction.GetTransactionStats))).Methods(http.MethodGet)
 	router.Handle("/api/transaction/{transactionID}",
 		middleware.VerifyAuth(&conf.JWT, []int32{user.RoleMaker, user.RoleApprover},
 			http.HandlerFunc(handlerTransaction.GetTransaction))).Methods(http.MethodGet)

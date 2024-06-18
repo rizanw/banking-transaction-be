@@ -12,11 +12,12 @@ type Repo interface {
 	FindCorporate(id int64, accountNum string) (corporate.CorporateDB, error)
 	GetCorporates() ([]corporate.CorporateDB, error)
 	InsertUser(in user.UserDB) (int64, error)
-	FindUser(username, email string, id int64) (user.UserDB, error)
+	FindUsers(username, email string, id, corpID int64) ([]user.UserDB, error)
 	InsertTransaction(in transaction.TransactionDB) (int64, error)
-	GetTransactions(status, offset, limit int) ([]transaction.TransactionDB, int32, error)
+	GetTransactions(filter transaction.TransactionFilter, offset, limit int) ([]transaction.TransactionDB, int32, error)
 	FindTransaction(transactionID int64) (transaction.TransactionDB, error)
 	UpdateTransaction(transaction transaction.TransactionDB) error
+	CountTransactionsGroupedStatus() (map[int32]int64, error)
 	InsertTransactionDetails(in []transaction.TransactionDetailDB) error
 	FindTransactionDetails(transactionID int64) ([]transaction.TransactionDetailDB, int32, error)
 	UpdateTransactionDetailStatus(trxID int64, status int32) error

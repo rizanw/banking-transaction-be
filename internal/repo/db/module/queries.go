@@ -46,7 +46,7 @@ const qFindUser = `
 		"corporate_id",
 		"role"
 	FROM "users" 
-	WHERE username = $1 OR email = $2 OR id = $3;
+	WHERE username = $1 OR email = $2 OR id = $3 OR corporate_id = $4;
 `
 
 const qInsertTransaction = `
@@ -77,6 +77,12 @@ const qUpdateTransaction = `
 	UPDATE "transactions"
 	SET "status" = $1, "updated_at" = $2
 	WHERE "id" = $3
+`
+
+const qCountTransactionsGroupedStatus = `
+	SELECT status, COUNT(*) as count
+	FROM transactions
+	GROUP BY status;
 `
 
 const (
