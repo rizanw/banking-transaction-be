@@ -1,11 +1,11 @@
 -- create corporates table
-CREATE TABLE IF NOT EXISTS "corporates"
+CREATE TABLE "corporates"
 (
-    "id"          bigserial PRIMARY KEY,
+    "id"          UUID PRIMARY KEY      DEFAULT gen_random_uuid(),
     "account_num" varchar(255) NOT NULL UNIQUE,
     "name"        varchar(255) NOT NULL,
     "created_at"  timestamptz  NOT NULL DEFAULT (now()),
-    "updated_at"  timestamptz
+    "updated_at"  timestamptz  NOT NULL DEFAULT (now())
 );
 
 CREATE UNIQUE INDEX CONCURRENTLY ON corporates ("account_num");

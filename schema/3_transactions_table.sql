@@ -1,16 +1,16 @@
 -- create transactions table
-CREATE TABLE IF NOT EXISTS "transactions"
+CREATE TABLE "transactions"
 (
-    "id"               bigserial PRIMARY KEY,
+    "id"               UUID PRIMARY KEY      DEFAULT gen_random_uuid(),
     "ref_num"          varchar(255) NOT NULL UNIQUE,
     "amount_total"     numeric      NOT NULL,
     "record_total"     int          NOT NULL,
-    "maker"            bigint,
+    "maker"            UUID,
     "date"             timestamptz  NOT NULL,
     "status"           smallint     NOT NULL,
     "instruction_type" varchar(255) NOT NULL,
     "created_at"       timestamptz  NOT NULL DEFAULT (now()),
-    "updated_at"       timestamptz
+    "updated_at"       timestamptz  NOT NULL DEFAULT (now())
 );
 
 ALTER TABLE "transactions"

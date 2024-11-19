@@ -1,6 +1,6 @@
 .PHONY: build
 build:
-	go build -v -o bin/tx-bank cmd/*.go
+	go build -v -o bin/tx-bank cmd/http/*.go
 
 .PHONY: build
 run:

@@ -1,39 +1,29 @@
 package module
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"time"
-	"tx-bank/internal/model/auth"
+	dotp "tx-bank/internal/domain/otp"
 )
 
-func (u *usecase) SendOTP(email string) error {
+func (u *usecase) SendOTP(ctx context.Context, email string) error {
 	var (
-		err    error
-		expiry = time.Now().Add(time.Hour * 24)
+		err error
 	)
 
-	if users, err := u.db.FindUsers("", email, 0, 0); err != nil {
+	otp := dotp.NewOTP(email)
+
+	if err = u.otpRepo.Store(ctx, otp); err != nil {
 		return err
-	} else if len(users) > 0 {
-		return errors.New("email already in use")
 	}
 
-	otp := generateOTP()
-	if err = u.sendMail(email,
+	// TODO: add retry mechanism when send fail
+	if err = u.notificationSvc.SendMail(email,
 		"Subject: Your OTP Code\n",
-		fmt.Sprintf("Your OTP code is: %s.\nPlease use it before %s.", otp, expiry.Format(time.RFC1123)),
+		fmt.Sprintf("Your OTP code is: %s.\nPlease use it before %s.", otp, otp.Expiry().Format(time.RFC1123)),
 	); err != nil {
 		return err
 	}
-
-	if err = u.db.InsertOTP(auth.OTP{
-		Email:  email,
-		Code:   otp,
-		Expire: expiry,
-	}); err != nil {
-		return err
-	}
-
 	return nil
 }

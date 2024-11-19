@@ -1,19 +1,15 @@
 package module
 
-import "tx-bank/internal/model/transaction"
+import (
+	"context"
+	dtransaction "tx-bank/internal/domain/transaction"
+)
 
-func (u *usecase) GetTransactionStats() (transaction.TransactionStats, error) {
-	var (
-		transactionStats transaction.TransactionStats
-	)
-
-	data, err := u.db.CountTransactionsGroupedStatus()
+func (u *usecase) GetTransactionStats(ctx context.Context) (dtransaction.StatusCounter, error) {
+	data, err := u.transactionRepo.CountTransactionsGroupByStatus(ctx)
 	if err != nil {
-		return transaction.TransactionStats{}, err
+		return dtransaction.StatusCounter{}, err
 	}
 
-	transactionStats.AwaitingApproval = data[transaction.StatusAwaitingApproval]
-	transactionStats.Approved = data[transaction.StatusApproved]
-	transactionStats.Rejected = data[transaction.StatusRejected]
-	return transactionStats, nil
+	return *data, nil
 }

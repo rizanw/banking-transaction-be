@@ -3,57 +3,53 @@ package module
 import (
 	"context"
 	"errors"
-	"time"
-	"tx-bank/internal/common/session"
-	"tx-bank/internal/model/transaction"
+	dtransaction "tx-bank/internal/domain/transaction"
+
+	"github.com/google/uuid"
 )
 
-func (u *usecase) AuditTransaction(ctx context.Context, trxID int64, action string) error {
+func (u *usecase) AuditTransaction(ctx context.Context, userID, trxID uuid.UUID, action string) error {
 	var (
-		trx    transaction.TransactionDB
-		status int32
-		ses    = ctx.Value("session").(session.Session)
+		status dtransaction.Status
 	)
 
 	// convert action to status
 	switch action {
-	case transaction.AuditActionApprove:
-		status = transaction.StatusApproved
-	case transaction.AuditActionReject:
-		status = transaction.StatusRejected
+	case dtransaction.AuditActionApprove:
+		status = dtransaction.StatusApproved
+	case dtransaction.AuditActionReject:
+		status = dtransaction.StatusRejected
 	}
 
 	// get current trx data
-	trx, err := u.db.FindTransaction(trxID)
+	trx, err := u.transactionRepo.GetTransactionByID(ctx, trxID)
 	if err != nil {
 		return err
 	}
+	if len(trx.ID.String()) <= 0 {
+		return errors.New("transaction not found")
+	}
 
 	// validate transaction:StatusAwaitingApproval only
-	if trx.Status != transaction.StatusAwaitingApproval {
+	if trx.Status != dtransaction.StatusAwaitingApproval {
 		return errors.New("transaction is already changed")
 	}
 
 	// update status trx
-	trx.Status = status
-	err = u.db.UpdateTransaction(trx)
+	err = u.transactionRepo.UpdateTransactionStatus(ctx, trx.ID, status)
 	if err != nil {
 		return err
 	}
 
 	// update detail trx status
-	err = u.db.UpdateTransactionDetailStatus(trxID, status)
+	err = u.transactionRepo.UpdateTransactionDetailStatus(ctx, trx.ID, status)
 	if err != nil {
 		return err
 	}
 
 	// log audit
-	_, err = u.db.InsertAuditLog(transaction.AuditLogDB{
-		TransactionID: trxID,
-		UserID:        ses.UserID,
-		Action:        action,
-		Timestamp:     time.Now(),
-	})
+	auditLog := dtransaction.NewAuditLog(trx.ID, userID, action)
+	err = u.transactionRepo.InsertAuditLog(ctx, auditLog)
 	if err != nil {
 		return err
 	}

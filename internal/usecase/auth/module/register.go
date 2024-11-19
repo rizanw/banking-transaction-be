@@ -1,50 +1,44 @@
 package module
 
 import (
+	"context"
 	"errors"
-	"time"
-	"tx-bank/internal/model/auth"
-	"tx-bank/internal/model/corporate"
-	"tx-bank/internal/model/user"
+	duser "tx-bank/internal/domain/user"
+	"tx-bank/internal/dto"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (u usecase) Register(in auth.RegisterRequest) error {
-	var (
-		now      = time.Now()
-		err      error
-		corpData corporate.CorporateDB
-		userData user.UserDB = user.UserDB{
-			Role: in.Role,
-		}
-	)
+func (u *usecase) Register(ctx context.Context, in dto.RegisterRequest) error {
 
 	// validate role
-	if err = userData.ValidateRole(); err != nil {
+	role := duser.Role(in.Role)
+	if err := role.ValidateRole(); err != nil {
 		return err
 	}
 
 	// validate otp
-	if otpData, err := u.db.FindOTP(in.Email, in.Code); err != nil {
+	otpData, err := u.otpRepo.Find(ctx, in.Email, in.Code)
+	if err != nil {
 		return err
-	} else if otpData.ID == 0 {
-		return errors.New("OTP code is invalid")
-	} else if now.After(otpData.Expire) {
-		return errors.New("OTP code is expired")
+	}
+	if !otpData.IsValid() {
+		return errors.New("OTP is expired")
 	}
 
-	// validate and corporate data
-	if corpData, err = u.db.FindCorporate(0, in.CorporateAccountNumber); err != nil {
+	// validate and get corporate data
+	corporateData, err := u.corporateRepo.FindCorporate(ctx, uuid.Nil, in.CorporateAccountNumber)
+	if err != nil {
 		return err
-	} else if corpData.ID == 0 {
-		return errors.New("corporate not found")
 	}
 
 	// validate is user exist
-	if users, err := u.db.FindUsers(in.Username, in.Email, 0, 0); err != nil {
+	users, err := u.userRepo.FindUsers(ctx, &in.Username, &in.Email, nil)
+	if err != nil {
 		return err
-	} else if len(users) > 0 {
+	}
+	if len(users) > 0 {
 		return errors.New("user already exists")
 	}
 
@@ -55,15 +49,15 @@ func (u usecase) Register(in auth.RegisterRequest) error {
 	}
 
 	// add new user
-	userData = user.UserDB{
-		Username:    in.Username,
-		Password:    string(pwd),
-		Email:       in.Email,
-		Phone:       in.Phone,
-		CorporateID: corpData.ID,
-		Role:        in.Role,
-	}
-	if _, err = u.db.InsertUser(userData); err != nil {
+	user := duser.NewUser(
+		in.Username,
+		string(pwd),
+		in.Email,
+		in.Phone,
+		corporateData,
+		role,
+	)
+	if err = u.userRepo.CreateUser(ctx, user); err != nil {
 		return err
 	}
 

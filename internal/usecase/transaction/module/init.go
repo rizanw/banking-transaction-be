@@ -1,16 +1,22 @@
 package module
 
 import (
-	rDB "tx-bank/internal/repo/db"
-	ucTransaction "tx-bank/internal/usecase/transaction"
+	dcoporate "tx-bank/internal/domain/corporate"
+	dtransaction "tx-bank/internal/domain/transaction"
+	duser "tx-bank/internal/domain/user"
+	uctransaction "tx-bank/internal/usecase/transaction"
 )
 
 type usecase struct {
-	db rDB.Repo
+	transactionRepo dtransaction.Repository
+	userRepo        duser.Repository
+	corporateRepo   dcoporate.Repository
 }
 
-func New(db rDB.Repo) ucTransaction.UseCase {
+func New(transactionRepo dtransaction.Repository, userRepo duser.Repository, corporateRepo dcoporate.Repository) uctransaction.UseCase {
 	return &usecase{
-		db: db,
+		transactionRepo: transactionRepo,
+		userRepo:        userRepo,
+		corporateRepo:   corporateRepo,
 	}
 }

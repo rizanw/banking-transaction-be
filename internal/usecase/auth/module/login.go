@@ -1,61 +1,54 @@
 package module
 
 import (
+	"context"
 	"errors"
 	"time"
-	"tx-bank/internal/common/session"
-	"tx-bank/internal/model/auth"
-	"tx-bank/internal/model/user"
+	"tx-bank/internal/dto"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (u *usecase) Login(in auth.LoginRequest) (auth.LoginResponse, error) {
-	var (
-		res auth.LoginResponse
-		err error
-		now = time.Now()
-	)
+func (u *usecase) Login(ctx context.Context, in dto.LoginRequest) (dto.LoginResponse, error) {
 
 	// find existing user
-	users, err := u.db.FindUsers(in.Username, "", 0, 0)
+	userData, err := u.userRepo.GetUserByUsername(ctx, in.Username)
 	if err != nil {
-		return res, err
+		return dto.LoginResponse{}, err
 	}
-	if len(users) == 0 {
-		return res, errors.New("user not found")
+	if userData == nil {
+		return dto.LoginResponse{}, errors.New("user not found")
 	}
-	userData := users[0]
 
 	// compare hashed password
 	if err = bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(in.Password)); err != nil {
-		return res, errors.New("invalid password")
-	}
-
-	// generate token
-	token, err := u.generateToken(session.Session{
-		UserID: userData.ID,
-		Role:   userData.Role,
-		Email:  userData.Email,
-		Expiry: now.Add(24 * time.Hour).Unix(),
-	})
-	if err != nil {
-		return res, err
+		return dto.LoginResponse{}, errors.New("invalid password")
 	}
 
 	// find corp data
-	corpData, err := u.db.FindCorporate(userData.CorporateID, "")
+	corpData, err := u.corporateRepo.FindCorporate(ctx, userData.Corporate.ID, "")
 	if err != nil {
-		return res, err
+		return dto.LoginResponse{}, err
 	}
 
-	res.AccessToken = token
-	res.CorporateInfo = corpData
-	res.UserInfo = user.User{
-		Username: userData.Username,
-		Email:    userData.Email,
-		Phone:    userData.Phone,
-		Role:     userData.Role,
+	// generate token
+	token, err := u.sessionMgr.GenerateToken(userData.ID.String(), int32(userData.Role), 24*time.Hour)
+	if err != nil {
+		return dto.LoginResponse{}, err
 	}
-	return res, nil
+
+	return dto.LoginResponse{
+		AccessToken: token,
+		CorporateInfo: dto.CorporateLoginResponse{
+			Name:       corpData.Name,
+			AccountNum: corpData.AccountNum,
+		},
+		UserInfo: dto.UserLoginResponse{
+			ID:       userData.ID,
+			Username: userData.Username,
+			Email:    userData.Email,
+			Phone:    userData.Phone,
+			Role:     userData.Role.GetName(),
+		},
+	}, nil
 }

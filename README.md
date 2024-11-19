@@ -33,12 +33,20 @@ further endpoint description, kindly check postman collection.
 
 # Postman Collection
 
-Check the postman collection here:
-https://www.postman.com/navigation-candidate-18708542/workspace/banking-transaction/overview
+Check the postman collection here: https://www.postman.com/navigation-candidate-18708542/workspace/banking-transaction 
 
 # Database Design
 
 ![alt text](./schema/Screenshot%202024-06-18%20at%206.19.32%E2%80%AFPM.png)
+
+# Architecture Pattern
+
+This solution is using clean architecture by uncle bob based on
+his [book](https://books.google.co.id/books/about/Clean_Architecture.html?id=uGE1DwAAQBAJ&source=kp_book_description&redir_esc=y) & [blog](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html).
+
+![alt text](https://blog.cleancoder.com/uncle-bob/images/2012-08-13-the-clean-architecture/CleanArchitecture.jpg)
+
+![alt text](./architecture.png)
 
 # Getting Started
 
@@ -57,7 +65,7 @@ To clone this repo:
 git clone https://github.com/rizanw/banking-transaction-be.git
 ```
 
-To setup the environtment:
+To set up the environment:
 
 - to run docker-compose (we need it for local postgres)
 
@@ -107,12 +115,12 @@ make test
 - `files/` contains app files (including db & config)
     - `file/etc/tx-bank` contains app config files
 - `internal/` contains the whole logic of the app
-    - `internal/common` contains helper functions
-        - `internal/common/middleware` is for http middleware for client
-        - `internal/common/session` is the session manager for auth
     - `internal/config` is the config of the app, has relation to files directory
-    - `internal/handler` is application logic interface between this app with client
-    - `internal/model` is model business design
+    - `internal/domain` encapsulate enterprise wide business policies including repo abstraction
+    - `internal/dto` is data transfer object, not layer, just the way to transfer object between layers
+    - `internal/handler` is application interface controller
+    - `internal/infra` is the infrastructure or framework of the app
     - `internal/repo` is the repositories to fetch/store data of this app
-    - `internal/usecase` is main business logic
+    - `internal/usecase` is layer contains application specific business rules
+- `schema/` contains sql schemas
 - `go.mod` the golang dependencies list

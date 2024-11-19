@@ -1,10 +1,13 @@
 package auth
 
-import "tx-bank/internal/model/auth"
+import (
+	"context"
+	"tx-bank/internal/dto"
+)
 
 type UseCase interface {
-	SendOTP(email string) error
-	Register(in auth.RegisterRequest) error
-	Login(in auth.LoginRequest) (auth.LoginResponse, error)
+	SendOTP(ctx context.Context, email string) error
+	Register(ctx context.Context, in dto.RegisterRequest) error
+	Login(ctx context.Context, in dto.LoginRequest) (dto.LoginResponse, error)
 	Logout(sessionKey string) error
 }

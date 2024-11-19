@@ -1,61 +1,83 @@
 package module
 
 import (
-	"tx-bank/internal/model/transaction"
+	"context"
+	"errors"
+	dcorporate "tx-bank/internal/domain/corporate"
+	dtransaction "tx-bank/internal/domain/transaction"
+	duser "tx-bank/internal/domain/user"
+	"tx-bank/internal/dto"
+
+	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 )
 
-func (u *usecase) GetTransaction(in transaction.TransactionRequest) (transaction.TransactionDetailResponse, error) {
+func (u *usecase) GetTransaction(ctx context.Context, in dto.GetTransactionRequest) (dto.GetTransactionResponse, error) {
 	var (
-		err        error
-		trxDetails []transaction.TransactionDetail
+		eg        errgroup.Group
+		err       error
+		total     int32
+		maker     *duser.User
+		corporate *dcorporate.Corporate
 	)
 
-	transac, err := u.db.FindTransaction(in.TransactionID)
+	transaction, err := u.transactionRepo.GetTransactionByID(ctx, in.TransactionID)
 	if err != nil {
-		return transaction.TransactionDetailResponse{}, err
+		return dto.GetTransactionResponse{}, err
 	}
-	if transac.ID == 0 {
-		return transaction.TransactionDetailResponse{}, nil
-	}
-
-	makers, err := u.db.FindUsers("", "", transac.Maker, 0)
-	if err != nil || len(makers) == 0 {
-		return transaction.TransactionDetailResponse{}, err
-	}
-	maker := makers[0]
-
-	corp, err := u.db.FindCorporate(maker.CorporateID, "")
-	if err != nil {
-		return transaction.TransactionDetailResponse{}, err
+	if transaction == nil || transaction.ID == uuid.Nil {
+		return dto.GetTransactionResponse{}, errors.New("no transaction found")
 	}
 
-	transacDetails, total, err := u.db.FindTransactionDetails(transac.ID)
-	if err != nil {
-		return transaction.TransactionDetailResponse{}, err
-	}
-	for _, transacDetail := range transacDetails {
-		trxDetails = append(trxDetails, transaction.TransactionDetail{
-			ID:              transacDetail.ID,
-			ToAccountNumber: transacDetail.ToAccountNumber,
-			ToAccountName:   transacDetail.ToAccountName,
-			ToAccountBank:   transacDetail.ToAccountBank,
-			Amount:          transacDetail.Amount,
-			Description:     transacDetail.Description,
-			Status:          transacDetail.GetStatusName(),
-		})
+	eg.Go(func() error {
+		maker, err = u.userRepo.GetUserByID(ctx, transaction.Maker.ID)
+		if err != nil {
+			return err
+		}
+		corporate, err = u.corporateRepo.GetCorporateByID(ctx, maker.Corporate.ID)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	transactionDetails := make([]dto.DetailTransactionResponse, 0)
+	eg.Go(func() error {
+		trxDetails := make([]dtransaction.Detail, 0)
+		total, trxDetails, err = u.transactionRepo.GetTransactionDetails(ctx, transaction.ID)
+		if err != nil {
+			return err
+		}
+
+		for _, trx := range trxDetails {
+			transactionDetails = append(transactionDetails, dto.DetailTransactionResponse{
+				ID:              trx.ID,
+				ToAccountNumber: trx.ToAccountNumber,
+				ToAccountName:   trx.ToAccountName,
+				ToAccountBank:   trx.ToAccountBank,
+				Amount:          trx.Amount,
+				Description:     trx.Description,
+				Status:          trx.Status.GetName(),
+			})
+		}
+		return nil
+	})
+
+	if err = eg.Wait(); err != nil {
+		return dto.GetTransactionResponse{}, err
 	}
 
-	return transaction.TransactionDetailResponse{
-		ID:              in.TransactionID,
-		RefNum:          transac.RefNum,
-		FromAccountNum:  corp.AccountNum,
-		SubmitDateTime:  transac.CreatedAt.Format(layoutDateTime),
-		TransferDate:    transac.TxDate.Format(layoutDateTime),
-		InstructionType: transac.InstructionType,
+	return dto.GetTransactionResponse{
+		ID:              transaction.ID,
+		RefNum:          transaction.RefNum,
+		FromAccountNum:  corporate.AccountNum,
+		SubmitDateTime:  transaction.CreatedAt.Format(layoutDateTime),
+		TransferDate:    transaction.TxDate.Format(layoutDateTime),
+		InstructionType: transaction.InstructionType,
 		Maker:           maker.Username,
-		TotalAmount:     transac.AmountTotal,
-		TotalRecord:     transac.RecordTotal,
-		Data:            trxDetails,
+		TotalAmount:     transaction.AmountTotal,
+		TotalRecord:     transaction.RecordTotal,
+		Data:            transactionDetails,
 		Total:           total,
 		Page:            in.Page,
 		PerPage:         in.PerPage,

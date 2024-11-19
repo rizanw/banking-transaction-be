@@ -2,64 +2,70 @@ package module
 
 import (
 	"context"
-	"tx-bank/internal/model/transaction"
+	domain "tx-bank/internal/domain/transaction"
+	"tx-bank/internal/dto"
+
+	"github.com/google/uuid"
 )
 
-func (u *usecase) GetTransactions(ctx context.Context, in transaction.TransactionRequest) (transaction.TransactionResponse, error) {
-	var (
-		txData []transaction.Transaction
-		filter transaction.TransactionFilter = in.Filter
-	)
-
-	if filter.CorporateID > 0 {
-		users, err := u.db.FindUsers("", "", 0, filter.CorporateID)
+func (u *usecase) GetTransactions(ctx context.Context, in dto.GetTransactionsRequest) (dto.GetTransactionsResponse, error) {
+	filter := domain.TransactionFilter{
+		Status:    in.Filter.Status,
+		StartDate: in.Filter.StartDate,
+		EndDate:   in.Filter.EndDate,
+		Offset:    (in.Page - 1) * in.PerPage,
+		Limit:     in.PerPage,
+	}
+	if len(in.Filter.CorporateID.String()) > 0 {
+		users, err := u.userRepo.FindUsers(ctx, nil, nil, &in.Filter.CorporateID)
 		if err != nil {
-			return transaction.TransactionResponse{}, err
+			return dto.GetTransactionsResponse{}, err
 		}
-		usrs := make([]int64, 0)
-		for _, usr := range users {
-			usrs = append(usrs, usr.ID)
+		makers := make([]uuid.UUID, 0)
+		for _, user := range users {
+			makers = append(makers, user.ID)
 		}
-		filter.Makers = usrs
+		filter.Makers = makers
 	}
 
-	txs, total, err := u.db.GetTransactions(filter, (in.Page-1)*in.PerPage, in.PerPage)
+	total, transactions, err := u.transactionRepo.GetTransactions(ctx, filter)
 	if err != nil {
-		return transaction.TransactionResponse{}, err
+		return dto.GetTransactionsResponse{}, err
 	}
-	if len(txs) == 0 {
-		return transaction.TransactionResponse{
-			Data:  nil,
-			Total: 0,
-			Page:  1,
+	if len(transactions) == 0 {
+		return dto.GetTransactionsResponse{
+			Data:    []dto.DataTransactionsResponse{},
+			Total:   total,
+			Page:    in.Page,
+			PerPage: in.PerPage,
 		}, nil
 	}
 
-	makers, err := u.db.FindUsers("", "", txs[0].Maker, 0)
-	if err != nil || len(makers) == 0 {
-		return transaction.TransactionResponse{}, err
-	}
+	transactionsData := make([]dto.DataTransactionsResponse, 0)
+	for _, tx := range transactions {
+		maker, err := u.userRepo.GetUserByID(ctx, tx.Maker.ID)
+		if err != nil {
+			return dto.GetTransactionsResponse{}, err
+		}
+		corporate, err := u.corporateRepo.GetCorporateByID(ctx, maker.Corporate.ID)
+		if err != nil {
+			return dto.GetTransactionsResponse{}, err
+		}
 
-	corp, err := u.db.FindCorporate(makers[0].CorporateID, "")
-	if err != nil {
-		return transaction.TransactionResponse{}, err
-	}
-
-	for _, tx := range txs {
-		txData = append(txData, transaction.Transaction{
+		transactionsData = append(transactionsData, dto.DataTransactionsResponse{
 			TransactionID:       tx.ID,
 			RefNum:              tx.RefNum,
 			TotalTransferAmount: tx.AmountTotal,
 			TotalTransferRecord: tx.RecordTotal,
-			FromAccountNo:       corp.AccountNum,
-			Maker:               makers[0].Username,
+			FromAccountNo:       corporate.AccountNum,
+			Maker:               maker.Username,
 			TransferDate:        tx.TxDate.Format(layoutDateTime),
-			Status:              tx.GetStatusName(),
+			Status:              tx.Status.GetName(),
 		})
 	}
 
-	return transaction.TransactionResponse{
-		Data:    txData,
+	return dto.GetTransactionsResponse{
+		Data:    transactionsData,
 		Total:   total,
 		Page:    in.Page,
 		PerPage: in.PerPage,

@@ -1,11 +1,11 @@
 -- create audit_logs table
-CREATE TABLE IF NOT EXISTS "audit_logs"
+CREATE TABLE "audit_logs"
 (
-    "id"             bigserial PRIMARY KEY,
-    "transaction_id" bigint       NOT NULL,
-    "user_id"        bigint       NOT NULL,
+    "id"             UUID PRIMARY KEY      DEFAULT gen_random_uuid(),
+    "transaction_id" UUID         NOT NULL,
+    "user_id"        UUID         NOT NULL,
     "action"         varchar(255) NOT NULL,
-    "timestamp"      timestamptz  NOT NULL
+    "timestamp"      timestamptz  NOT NULL DEFAULT (now())
 );
 
 ALTER TABLE "audit_logs"
