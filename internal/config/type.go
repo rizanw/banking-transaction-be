@@ -5,7 +5,7 @@ type Config struct {
 	Database DBConfig    `yaml:"database"`
 	Redis    RedisConfig `yaml:"redis"`
 	SMTP     SMTPConfig  `yaml:"smtp_server"`
-	JWT      JWTConfig
+	JWT      JWTConfig   `yaml:"jwt"`
 }
 
 type Server struct {
@@ -13,6 +13,9 @@ type Server struct {
 	Port         int32  `yaml:"port"`
 	WriteTimeout int64  `yaml:"write_timeout"`
 	ReadTimeout  int64  `yaml:"read_timeout"`
+
+	// AllowedOrigins for CORS (default: all origins)
+	AllowedOrigins []string `yaml:"allowed_origins"`
 }
 
 type DBConfig struct {
@@ -31,7 +34,8 @@ type RedisConfig struct {
 }
 
 type JWTConfig struct {
-	Secret []byte
+	// Secret signs access tokens. Set it with the JWT_SECRET env var in production.
+	Secret string `yaml:"secret"`
 }
 
 type SMTPConfig struct {

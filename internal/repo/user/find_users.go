@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	dcorporate "tx-bank/internal/domain/corporate"
 	duser "tx-bank/internal/domain/user"
 
 	"github.com/google/uuid"
@@ -30,7 +31,7 @@ func (r *repo) FindUsers(ctx context.Context, username, email *string, corporate
 	defer rows.Close()
 
 	for rows.Next() {
-		var user duser.User
+		user := duser.User{Corporate: &dcorporate.Corporate{}}
 		err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.Email, &user.Phone, &user.Corporate.ID, &user.Role)
 		if err != nil {
 			return nil, err

@@ -7,8 +7,7 @@ import (
 	"time"
 	dtransaction "tx-bank/internal/domain/transaction"
 	"tx-bank/internal/dto"
-
-	"github.com/google/uuid"
+	"tx-bank/internal/handler/http/httputil"
 )
 
 func (h *Handler) GetTransactions(w http.ResponseWriter, r *http.Request) {
@@ -22,9 +21,16 @@ func (h *Handler) GetTransactions(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	req = parseGetTransactionsRequest(r)
+	userID, ok := httputil.UserID(r)
+	if !ok {
+		httputil.Message(w, http.StatusUnauthorized, "user not login")
+		return
+	}
+	req.RequesterID = userID
+
 	res, err = h.ucTransaction.GetTransactions(ctx, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.Message(w, http.StatusInternalServerError, "failed to get transactions")
 		return
 	}
 
@@ -47,17 +53,14 @@ func parseGetTransactionsRequest(r *http.Request) dto.GetTransactionsRequest {
 	if err != nil || perPage < 1 {
 		perPage = 10
 	}
+	if perPage > 100 {
+		perPage = 100
+	}
 
 	statusParam := r.URL.Query().Get("status")
 	status, err := strconv.Atoi(statusParam)
 	if err != nil || status < 1 {
 		status = 0
-	}
-
-	corporateIDParam := r.URL.Query().Get("corporate_id")
-	corporateID, err := uuid.Parse(corporateIDParam)
-	if err != nil {
-		corporateID = uuid.Nil
 	}
 
 	startDate := time.Time{}
@@ -84,10 +87,9 @@ func parseGetTransactionsRequest(r *http.Request) dto.GetTransactionsRequest {
 		Page:    page,
 		PerPage: perPage,
 		Filter: dto.FilterTransactionsRequest{
-			Status:      dtransaction.Status(status),
-			CorporateID: corporateID,
-			StartDate:   startDate,
-			EndDate:     endDate,
+			Status:    dtransaction.Status(status),
+			StartDate: startDate,
+			EndDate:   endDate,
 		},
 	}
 }

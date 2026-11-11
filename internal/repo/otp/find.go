@@ -15,7 +15,9 @@ const qFindOTP = `
 	    "id", "recipient", "code", "is_active", "created_at"
 	FROM "otps"
 	WHERE
-	    recipient = $1 AND code = $2;
+	    recipient = $1 AND code = $2 AND is_active = true
+	ORDER BY created_at DESC
+	LIMIT 1;
 `
 
 type otpSchema struct {
@@ -26,11 +28,15 @@ type otpSchema struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
+// Find returns the active OTP matching recipient and code, or nil, nil if none matches.
 func (r *repo) Find(ctx context.Context, recipient, code string) (*domain.OTP, error) {
 	var otp otpSchema
 
 	err := r.db.QueryRowContext(ctx, qFindOTP, recipient, code).Scan(&otp.ID, &otp.Recipient, &otp.Code, &otp.IsActive, &otp.CreatedAt)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
 		return nil, err
 	}
 

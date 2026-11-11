@@ -2,62 +2,71 @@ package module
 
 import (
 	"context"
-	"errors"
 	dcorporate "tx-bank/internal/domain/corporate"
 	dtransaction "tx-bank/internal/domain/transaction"
 	duser "tx-bank/internal/domain/user"
 	"tx-bank/internal/dto"
 
-	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 )
 
 func (u *usecase) GetTransaction(ctx context.Context, in dto.GetTransactionRequest) (dto.GetTransactionResponse, error) {
-	var (
-		eg        errgroup.Group
-		err       error
-		total     int32
-		maker     *duser.User
-		corporate *dcorporate.Corporate
-	)
-
 	transaction, err := u.transactionRepo.GetTransactionByID(ctx, in.TransactionID)
 	if err != nil {
 		return dto.GetTransactionResponse{}, err
 	}
-	if transaction == nil || transaction.ID == uuid.Nil {
-		return dto.GetTransactionResponse{}, errors.New("no transaction found")
+	if transaction == nil {
+		return dto.GetTransactionResponse{}, dtransaction.ErrNotFound
 	}
 
+	// hide transactions from other corporates as if they didn't exist
+	allowed, err := u.sameCorporate(ctx, in.RequesterID, transaction.Maker.ID)
+	if err != nil {
+		return dto.GetTransactionResponse{}, err
+	}
+	if !allowed {
+		return dto.GetTransactionResponse{}, dtransaction.ErrNotFound
+	}
+
+	var (
+		eg                 errgroup.Group
+		total              int32
+		maker              *duser.User
+		corporate          *dcorporate.Corporate
+		transactionDetails = make([]dto.DetailTransactionResponse, 0)
+	)
+
 	eg.Go(func() error {
+		var err error
 		maker, err = u.userRepo.GetUserByID(ctx, transaction.Maker.ID)
 		if err != nil {
 			return err
 		}
-		corporate, err = u.corporateRepo.GetCorporateByID(ctx, maker.Corporate.ID)
-		if err != nil {
-			return err
+		if maker == nil {
+			return dtransaction.ErrNotFound
 		}
-		return nil
+		corporate, err = u.corporateRepo.GetCorporateByID(ctx, maker.Corporate.ID)
+		return err
 	})
 
-	transactionDetails := make([]dto.DetailTransactionResponse, 0)
 	eg.Go(func() error {
-		trxDetails := make([]dtransaction.Detail, 0)
-		total, trxDetails, err = u.transactionRepo.GetTransactionDetails(ctx, transaction.ID)
+		var (
+			details []dtransaction.Detail
+			err     error
+		)
+		total, details, err = u.transactionRepo.GetTransactionDetails(ctx, transaction.ID)
 		if err != nil {
 			return err
 		}
-
-		for _, trx := range trxDetails {
+		for _, d := range details {
 			transactionDetails = append(transactionDetails, dto.DetailTransactionResponse{
-				ID:              trx.ID,
-				ToAccountNumber: trx.ToAccountNumber,
-				ToAccountName:   trx.ToAccountName,
-				ToAccountBank:   trx.ToAccountBank,
-				Amount:          trx.Amount,
-				Description:     trx.Description,
-				Status:          trx.Status.GetName(),
+				ID:              d.ID,
+				ToAccountNumber: d.ToAccountNumber,
+				ToAccountName:   d.ToAccountName,
+				ToAccountBank:   d.ToAccountBank,
+				Amount:          d.Amount,
+				Description:     d.Description,
+				Status:          d.Status.GetName(),
 			})
 		}
 		return nil

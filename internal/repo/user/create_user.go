@@ -9,12 +9,11 @@ const qInsertUser = `
 	INSERT INTO "users"
 		("username", "password", "email", "phone", "corporate_id", "role")
 	VALUES
-		($1,$2,$3,$4,$5,$6)
-	RETURNING id;
+		($1,$2,$3,$4,$5,$6);
 `
 
 func (r *repo) CreateUser(ctx context.Context, user *user.User) error {
-	_, err := r.db.QueryxContext(
+	_, err := r.db.ExecContext(
 		ctx,
 		qInsertUser,
 		user.Username, user.Password, user.Email, user.Phone, user.Corporate.ID, user.Role,

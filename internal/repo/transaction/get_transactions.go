@@ -5,60 +5,64 @@ import (
 	"fmt"
 	"strings"
 	domain "tx-bank/internal/domain/transaction"
+	"tx-bank/internal/domain/user"
 
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"golang.org/x/sync/errgroup"
 )
 
-const qGetTransactions = `
+const (
+	qGetTransactions = `
 	SELECT 
 		"id", "ref_num", "amount_total", "record_total", "maker", "date", "status"
 	FROM 
 	    "transactions"
 `
+	qCountTransactions = `SELECT COUNT(*) FROM "transactions"`
+)
 
 func (r *repo) GetTransactions(ctx context.Context, in domain.TransactionFilter) (int32, []domain.Transaction, error) {
 	var (
-		transactions []domain.Transaction
+		transactions = make([]domain.Transaction, 0)
 		total        int32
-		eg           errgroup.Group
+		eg, egCtx    = errgroup.WithContext(ctx)
 	)
 
-	query, whereList, whereParam, params := buildQueryGetTransactions(in, in.Offset, in.Limit)
+	where, whereParams := buildTransactionsWhere(in)
 
 	eg.Go(func() error {
-		rows, err := r.db.QueryxContext(ctx, query, params...)
+		query, params := buildQueryGetTransactions(where, whereParams, in.Offset, in.Limit)
+		rows, err := r.db.QueryxContext(egCtx, query, params...)
 		if err != nil {
 			return err
 		}
+		defer rows.Close()
+
 		for rows.Next() {
-			var tx domain.Transaction
+			var (
+				tx      domain.Transaction
+				makerID uuid.UUID
+			)
 			if err = rows.Scan(
 				&tx.ID,
 				&tx.RefNum,
 				&tx.AmountTotal,
 				&tx.RecordTotal,
-				&tx.Maker.ID,
+				&makerID,
 				&tx.TxDate,
 				&tx.Status,
 			); err != nil {
 				return err
 			}
-
+			tx.Maker = &user.User{ID: makerID}
 			transactions = append(transactions, tx)
 		}
-		return nil
+		return rows.Err()
 	})
 
 	eg.Go(func() error {
-		query = "SELECT COUNT(*) FROM transactions"
-		if len(whereList) > 0 {
-			query = query + " WHERE " + strings.Join(whereList, " AND ")
-		}
-		if err := r.db.QueryRow(query, whereParam...).Scan(&total); err != nil {
-			return err
-		}
-		return nil
+		return r.db.QueryRowContext(egCtx, qCountTransactions+where, whereParams...).Scan(&total)
 	})
 
 	if err := eg.Wait(); err != nil {
@@ -68,51 +72,44 @@ func (r *repo) GetTransactions(ctx context.Context, in domain.TransactionFilter)
 	return total, transactions, nil
 }
 
-func buildQueryGetTransactions(filter domain.TransactionFilter, offset, limit int) (string, []string, []interface{}, []interface{}) {
+// buildTransactionsWhere returns the WHERE clause (with a leading space) and its parameters.
+func buildTransactionsWhere(filter domain.TransactionFilter) (string, []interface{}) {
 	var (
-		query       string = qGetTransactions
-		whereList   []string
-		whereParams []interface{}
-		params      []interface{}
-		countParams int = 1
+		conditions []string
+		params     []interface{}
 	)
-
-	if filter.Status > 0 {
-		whereList = append(whereList, fmt.Sprintf("status=$%d", countParams))
-		params = append(params, filter.Status)
-		countParams++
+	add := func(condition string, value interface{}) {
+		params = append(params, value)
+		conditions = append(conditions, fmt.Sprintf(condition, len(params)))
 	}
-	if len(filter.Makers) > 0 {
-		whereList = append(whereList, fmt.Sprintf(`maker=ANY($%d)`, countParams))
-		params = append(params, pq.Array(filter.Makers))
-		countParams++
+
+	// always scope to the given makers, so callers never see other corporates' data
+	add(`maker=ANY($%d)`, pq.Array(filter.Makers))
+	if filter.Status > 0 {
+		add("status=$%d", filter.Status)
 	}
 	if !filter.StartDate.IsZero() {
-		whereList = append(whereList, fmt.Sprintf("date>=$%d", countParams))
-		params = append(params, filter.StartDate)
-		countParams++
+		add("date>=$%d", filter.StartDate)
 	}
 	if !filter.EndDate.IsZero() {
-		whereList = append(whereList, fmt.Sprintf("date<$%d", countParams))
-		params = append(params, filter.EndDate)
-		countParams++
-	}
-	if len(whereList) > 0 {
-		query = query + " WHERE " + strings.Join(whereList, " AND ")
-		whereParams = append(whereParams, params...)
+		add("date<$%d", filter.EndDate)
 	}
 
-	query = query + " ORDER BY date DESC"
-	if offset >= 0 {
-		query = query + fmt.Sprintf(" OFFSET $%d", countParams)
+	return " WHERE " + strings.Join(conditions, " AND "), params
+}
+
+func buildQueryGetTransactions(where string, whereParams []interface{}, offset, limit int) (string, []interface{}) {
+	query := qGetTransactions + where + " ORDER BY date DESC"
+	params := append([]interface{}{}, whereParams...)
+
+	if offset > 0 {
 		params = append(params, offset)
-		countParams++
+		query += fmt.Sprintf(" OFFSET $%d", len(params))
 	}
 	if limit > 0 {
-		query = query + fmt.Sprintf(" LIMIT $%d", countParams)
 		params = append(params, limit)
-		countParams++
+		query += fmt.Sprintf(" LIMIT $%d", len(params))
 	}
 
-	return query, whereList, whereParams, params
+	return query, params
 }

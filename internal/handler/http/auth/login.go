@@ -2,8 +2,10 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"tx-bank/internal/dto"
+	ucAuth "tx-bank/internal/usecase/auth"
 )
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -30,9 +32,15 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := h.ucAuth.Login(ctx, req)
+	if errors.Is(err, ucAuth.ErrInvalidCredentials) {
+		w.WriteHeader(http.StatusUnauthorized)
+		res.Message = err.Error()
+		json.NewEncoder(w).Encode(res)
+		return
+	}
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		res.Message = err.Error()
+		res.Message = "failed to login"
 		json.NewEncoder(w).Encode(res)
 		return
 	}

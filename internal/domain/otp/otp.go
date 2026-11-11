@@ -10,7 +10,12 @@ import (
 )
 
 const (
-	TTL = 24 * time.Hour
+	// TTL is how long an OTP stays valid.
+	TTL = 10 * time.Minute
+
+	// MaxAttempts is the number of wrong codes allowed per email within AttemptsWindow.
+	MaxAttempts    = 5
+	AttemptsWindow = 15 * time.Minute
 )
 
 type OTP struct {

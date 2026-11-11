@@ -43,7 +43,12 @@ func (m *jwtManager) GenerateToken(userID string, role int32, duration time.Dura
 }
 
 func (m *jwtManager) ValidateToken(token string) (string, int32, error) {
-	if m.isTokenBlacklisted(token) {
+	// fail closed: if the blacklist can't be checked, reject the token
+	blacklisted, err := m.isTokenBlacklisted(token)
+	if err != nil {
+		return "", 0, fmt.Errorf("check token blacklist: %w", err)
+	}
+	if blacklisted {
 		return "", 0, errors.New("expired token")
 	}
 
@@ -74,14 +79,15 @@ func (m *jwtManager) ValidateToken(token string) (string, int32, error) {
 	return userID, int32(role), nil
 }
 
+// BlacklistToken revokes a token until it would have expired anyway.
 func (m *jwtManager) BlacklistToken(token string) error {
-	return m.redis.Set(context.TODO(), fmt.Sprintf(formatKeyBlacklistedToken, token), true, 7*24*time.Hour).Err()
+	return m.redis.Set(context.TODO(), fmt.Sprintf(formatKeyBlacklistedToken, token), true, 25*time.Hour).Err()
 }
 
-func (m *jwtManager) isTokenBlacklisted(token string) bool {
+func (m *jwtManager) isTokenBlacklisted(token string) (bool, error) {
 	result, err := m.redis.Exists(context.TODO(), fmt.Sprintf(formatKeyBlacklistedToken, token)).Result()
 	if err != nil {
-		return false
+		return false, err
 	}
-	return result > 0
+	return result > 0, nil
 }

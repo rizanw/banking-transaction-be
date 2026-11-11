@@ -23,17 +23,17 @@ func main() {
 
 	conf, err := config.New(appName)
 	if err != nil {
-		return
+		log.Fatalf("failed to load config: %v", err)
 	}
 
 	resources, err := infra.NewResources(conf)
 	if err != nil {
-		return
+		log.Fatalf("failed to init resources: %v", err)
 	}
 
 	repo := newRepo(resources)
 	uc := newUseCase(repo, resources)
-	router := newRoutes(uc, resources.SessionManager)
+	router := newRoutes(uc, resources.SessionManager, conf.Server.AllowedOrigins)
 
 	address = fmt.Sprintf("%s:%d", conf.Server.Host, conf.Server.Port)
 	srv := http.Server{

@@ -2,9 +2,12 @@ package transaction
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
+	dtransaction "tx-bank/internal/domain/transaction"
 	"tx-bank/internal/dto"
+	"tx-bank/internal/handler/http/httputil"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -20,9 +23,24 @@ func (h *Handler) GetTransaction(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	req = parseGetTransaction(r)
+	if req.TransactionID == uuid.Nil {
+		httputil.Message(w, http.StatusBadRequest, "invalid transaction_id")
+		return
+	}
+	userID, ok := httputil.UserID(r)
+	if !ok {
+		httputil.Message(w, http.StatusUnauthorized, "user not login")
+		return
+	}
+	req.RequesterID = userID
+
 	res, err = h.ucTransaction.GetTransaction(ctx, req)
+	if errors.Is(err, dtransaction.ErrNotFound) {
+		httputil.Message(w, http.StatusNotFound, err.Error())
+		return
+	}
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httputil.Message(w, http.StatusInternalServerError, "failed to get transaction")
 		return
 	}
 

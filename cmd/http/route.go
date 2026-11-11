@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"tx-bank/internal/domain/user"
 	hauth "tx-bank/internal/handler/http/auth"
@@ -13,7 +12,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func newRoutes(uc UseCase, session session.Manager) http.Handler {
+func newRoutes(uc UseCase, session session.Manager, origins []string) http.Handler {
 	router := mux.NewRouter()
 
 	handlerCorporate := hUtils.New(uc.Corporate)
@@ -48,14 +47,13 @@ func newRoutes(uc UseCase, session session.Manager) http.Handler {
 			http.HandlerFunc(handlerTransaction.AuditTransaction))).Methods(http.MethodPost)
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("server OK!")
 		w.WriteHeader(http.StatusOK)
 	}).Methods(http.MethodGet)
 
 	// cors config
 	allowedHeaders := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	allowedMethods := handlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions})
-	allowedOrigins := handlers.AllowedOrigins([]string{"*"})
+	allowedOrigins := handlers.AllowedOrigins(origins)
 
 	return handlers.CORS(allowedHeaders, allowedOrigins, allowedMethods)(router)
 }

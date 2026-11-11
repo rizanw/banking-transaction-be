@@ -2,57 +2,42 @@ package module
 
 import (
 	"context"
-	"errors"
 	dtransaction "tx-bank/internal/domain/transaction"
 
 	"github.com/google/uuid"
 )
 
-func (u *usecase) AuditTransaction(ctx context.Context, userID, trxID uuid.UUID, action string) error {
-	var (
-		status dtransaction.Status
-	)
-
-	// convert action to status
+// AuditTransaction approves or rejects a transaction awaiting approval. The
+// approver must belong to the same corporate as the transaction's maker.
+func (u *usecase) AuditTransaction(ctx context.Context, approverID, trxID uuid.UUID, action string) error {
+	var status dtransaction.Status
 	switch action {
 	case dtransaction.AuditActionApprove:
 		status = dtransaction.StatusApproved
 	case dtransaction.AuditActionReject:
 		status = dtransaction.StatusRejected
+	default:
+		return dtransaction.ErrInvalidAction
 	}
 
-	// get current trx data
 	trx, err := u.transactionRepo.GetTransactionByID(ctx, trxID)
 	if err != nil {
 		return err
 	}
-	if len(trx.ID.String()) <= 0 {
-		return errors.New("transaction not found")
+	if trx == nil {
+		return dtransaction.ErrNotFound
 	}
 
-	// validate transaction:StatusAwaitingApproval only
-	if trx.Status != dtransaction.StatusAwaitingApproval {
-		return errors.New("transaction is already changed")
-	}
-
-	// update status trx
-	err = u.transactionRepo.UpdateTransactionStatus(ctx, trx.ID, status)
+	allowed, err := u.sameCorporate(ctx, approverID, trx.Maker.ID)
 	if err != nil {
 		return err
 	}
-
-	// update detail trx status
-	err = u.transactionRepo.UpdateTransactionDetailStatus(ctx, trx.ID, status)
-	if err != nil {
-		return err
+	if !allowed {
+		return dtransaction.ErrNotFound
 	}
 
-	// log audit
-	auditLog := dtransaction.NewAuditLog(trx.ID, userID, action)
-	err = u.transactionRepo.InsertAuditLog(ctx, auditLog)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	// the repository only applies the change if the transaction is still awaiting
+	// approval, so concurrent approvals can't both succeed
+	auditLog := dtransaction.NewAuditLog(trx.ID, approverID, action)
+	return u.transactionRepo.AuditTransaction(ctx, auditLog, dtransaction.StatusAwaitingApproval, status)
 }

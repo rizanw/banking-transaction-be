@@ -3,23 +3,24 @@ package main
 import (
 	"context"
 	"net/http"
+	"strings"
 	"tx-bank/internal/infra/session"
 )
 
 func MiddlewareAuth(jwt session.Manager, roles []int32, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// get auth token from header
-		tokenString := r.Header.Get("Authorization")
-		if tokenString == "" {
-			http.Error(w, "Missing authorization header", http.StatusUnauthorized)
+		authHeader := r.Header.Get("Authorization")
+		if !strings.HasPrefix(authHeader, "Bearer ") || len(authHeader) == len("Bearer ") {
+			http.Error(w, "Missing or invalid authorization header", http.StatusUnauthorized)
 			return
 		}
-		tokenString = tokenString[len("Bearer "):]
+		tokenString := authHeader[len("Bearer "):]
 
 		// Validate the JWT token
 		userID, role, err := jwt.ValidateToken(tokenString)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 

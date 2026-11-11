@@ -2,27 +2,28 @@ package module
 
 import (
 	"context"
-	"errors"
 	"time"
 	"tx-bank/internal/dto"
+	ucAuth "tx-bank/internal/usecase/auth"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (u *usecase) Login(ctx context.Context, in dto.LoginRequest) (dto.LoginResponse, error) {
+const tokenTTL = 24 * time.Hour
 
+func (u *usecase) Login(ctx context.Context, in dto.LoginRequest) (dto.LoginResponse, error) {
 	// find existing user
 	userData, err := u.userRepo.GetUserByUsername(ctx, in.Username)
 	if err != nil {
 		return dto.LoginResponse{}, err
 	}
-	if userData == nil {
-		return dto.LoginResponse{}, errors.New("user not found")
-	}
 
-	// compare hashed password
+	// same error for unknown user and wrong password, so usernames can't be enumerated
+	if userData == nil {
+		return dto.LoginResponse{}, ucAuth.ErrInvalidCredentials
+	}
 	if err = bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(in.Password)); err != nil {
-		return dto.LoginResponse{}, errors.New("invalid password")
+		return dto.LoginResponse{}, ucAuth.ErrInvalidCredentials
 	}
 
 	// find corp data
@@ -30,9 +31,12 @@ func (u *usecase) Login(ctx context.Context, in dto.LoginRequest) (dto.LoginResp
 	if err != nil {
 		return dto.LoginResponse{}, err
 	}
+	if corpData == nil {
+		return dto.LoginResponse{}, ucAuth.ErrCorporateNotFound
+	}
 
 	// generate token
-	token, err := u.sessionMgr.GenerateToken(userData.ID.String(), int32(userData.Role), 24*time.Hour)
+	token, err := u.sessionMgr.GenerateToken(userData.ID.String(), int32(userData.Role), tokenTTL)
 	if err != nil {
 		return dto.LoginResponse{}, err
 	}

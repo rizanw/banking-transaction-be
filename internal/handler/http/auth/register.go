@@ -2,8 +2,10 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"tx-bank/internal/dto"
+	ucAuth "tx-bank/internal/usecase/auth"
 )
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -28,8 +30,21 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.ucAuth.Register(ctx, req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	switch {
+	case errors.Is(err, ucAuth.ErrTooManyAttempts):
+		http.Error(w, err.Error(), http.StatusTooManyRequests)
+		return
+	case errors.Is(err, ucAuth.ErrInvalidOTP), errors.Is(err, ucAuth.ErrCorporateNotFound):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	case errors.Is(err, ucAuth.ErrUserExists):
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	case err != nil && err.Error() == "invalid role":
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	case err != nil:
+		http.Error(w, "failed to register", http.StatusInternalServerError)
 		return
 	}
 
