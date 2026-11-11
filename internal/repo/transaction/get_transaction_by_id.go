@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
 	domain "tx-bank/internal/domain/transaction"
+	"tx-bank/internal/domain/user"
 
 	"github.com/google/uuid"
 )
@@ -20,37 +20,39 @@ const qGetTransactionByID = `
 	    "id" = $1;
 `
 
+// GetTransactionByID returns nil, nil when the transaction doesn't exist.
 func (r *repo) GetTransactionByID(ctx context.Context, id uuid.UUID) (*domain.Transaction, error) {
 	var (
-		cacheKey    = fmt.Sprintf("transaction:%s", id.String())
+		cacheKey    = cacheKeyTransaction(id)
 		cacheTTL    = 1 * time.Minute
 		transaction domain.Transaction
-		err         error
+		makerID     uuid.UUID
 	)
 
-	err = r.cache.Get(ctx, cacheKey, &transaction)
-	if err == nil || transaction.ID != uuid.Nil {
+	if err := r.cache.Get(ctx, cacheKey, &transaction); err == nil && transaction.ID != uuid.Nil {
 		return &transaction, nil
 	}
 
-	row := r.db.QueryRowxContext(ctx, qGetTransactionByID, id)
-	if err = row.Scan(
+	err := r.db.QueryRowxContext(ctx, qGetTransactionByID, id).Scan(
 		&transaction.ID,
 		&transaction.RefNum,
 		&transaction.AmountTotal,
 		&transaction.RecordTotal,
-		&transaction.Maker,
+		&makerID,
 		&transaction.TxDate,
 		&transaction.Status,
 		&transaction.InstructionType,
 		&transaction.CreatedAt,
-	); errors.Is(err, sql.ErrNoRows) {
+	)
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
-	} else if err != nil {
+	}
+	if err != nil {
 		return nil, err
 	}
+	transaction.Maker = &user.User{ID: makerID}
 
-	r.cache.Set(ctx, cacheKey, transaction, cacheTTL)
+	_ = r.cache.Set(ctx, cacheKey, transaction, cacheTTL)
 
 	return &transaction, nil
 }

@@ -1,8 +1,9 @@
 package infra
 
 import (
+	"context"
 	"fmt"
-	"log"
+	"time"
 	"tx-bank/internal/config"
 	"tx-bank/internal/infra/cache"
 	rcache "tx-bank/internal/infra/cache/redis"
@@ -33,18 +34,19 @@ func NewResources(conf *config.Config) (*Resources, error) {
 	psqlsource := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", conf.Database.Host, conf.Database.Port, conf.Database.User, conf.Database.Password, conf.Database.DBName)
 	psqlx, err := sqlx.Connect("postgres", psqlsource)
 	if err != nil {
-		log.Fatalf("Failed create database conn, with err:%+v", err)
-		return nil, err
+		return nil, fmt.Errorf("connect database: %w", err)
 	}
 
 	// init redis
 	rdsCli := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       0,
+		Addr:     fmt.Sprintf("%s:%d", conf.Redis.Host, conf.Redis.Port),
+		Password: conf.Redis.Password,
+		DB:       conf.Redis.DB,
 	})
-	if rdsCli == nil {
-		log.Fatalf("failed to init redis")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err = rdsCli.Ping(ctx).Err(); err != nil {
+		return nil, fmt.Errorf("connect redis: %w", err)
 	}
 	rdsCache := rcache.New(rdsCli)
 
@@ -52,7 +54,7 @@ func NewResources(conf *config.Config) (*Resources, error) {
 	notifSvc := notifsvc.New(conf.SMTP)
 
 	// init jwt session manager
-	jwtManager := session.NewJWTManager(string(conf.JWT.Secret), rdsCli)
+	jwtManager := session.NewJWTManager(conf.JWT.Secret, rdsCli)
 
 	return &Resources{
 		Database:            psqlx,

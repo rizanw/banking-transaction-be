@@ -23,3 +23,8 @@ func (s *NotificationService) SendMail(receiver, subject, content string) error 
 
 	return nil
 }
+
+// Enabled reports whether SMTP credentials are configured.
+func (s *NotificationService) Enabled() bool {
+	return s.SMTPConf.Username != "" && s.SMTPConf.Password != ""
+}

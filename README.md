@@ -1,126 +1,133 @@
 # banking-transaction-be
 
-# Overview
+A REST API for corporate bank transfers with a **maker–checker** approval flow: makers upload batches of transfers from a CSV file, and approvers from the same company review and approve or reject them. Built in Go with clean architecture, PostgreSQL, Redis, and JWT authentication.
 
-Backend restful API to manage bank transaction with 2 roles user including authentication using jwt+session and
-authorization based on their roles.
-`maker` role can create the transaction but can not `approve` the transaction. the `approver` role with review and
-approve or reject the transaction.
-beside that the registration is also using otp verification code send by email. and many more features inside! kindly
-check!
-
-for the frontend please check: https://github.com/rizanw/banking-transaction-fe
+Frontend: [banking-transaction-fe](https://github.com/rizanw/banking-transaction-fe)
 
 ## Features
 
-endpoint list:
+- **Maker–checker workflow**: makers submit transfers, approvers approve or reject them; nobody can approve with a maker account, and every decision is recorded in an audit log
+- **Bulk transfers from CSV**: download a template, upload many transfers at once, and get per-row validation errors with row numbers
+- **Immediate or scheduled transfers**: send now, or set a future transfer date
+- **Corporate isolation**: users only see and act on their own company's transactions
+- **Registration with email OTP**: one-time codes that expire after 10 minutes, can only be used once, and are limited to 5 wrong attempts per 15 minutes
+- **JWT sessions with logout**: tokens are revoked on logout through a Redis blacklist
+- **Filtering and pagination**: filter transactions by status and date range, plus per-status counts for dashboards
 
-- **auth**:
-    - **send-otp**: to request otp code
-    - **register**: to register new user
-    - **login**: to login into the app
-    - **logout**: to clean the trace
-- **transaction**:
-    - **download-template**: to download transaction template in csv
-    - **upload**: to upload and submit the transaction data
-    - **transactions**: to get all data transactions and a lot of filter & pagination features here.
-    - **transaction/{id}**: to get the detail data transaction
-    - **transaction/{id}/audit**: to audit the transaction by approver
-- **utils**:
-    - **corporate** : helper endpoint for registration
+## How approval works
 
-further endpoint description, kindly check postman collection.
+```
+Maker                         API                                   Approver (same corporate)
+  │  POST /transaction/upload   │                                          │
+  ├────────────────────────────►│  status: Awaiting Approval               │
+  │                             │◄─────────────────────────────────────────┤ GET /transactions
+  │                             │◄─────────────────────────────────────────┤ POST /transaction/{id}/audit?action=approve
+  │                             │  one DB transaction:                     │
+  │                             │   1. status → Approved, only if still    │
+  │                             │      Awaiting Approval                   │
+  │                             │   2. same status on every transfer row   │
+  │                             │   3. audit log with the approver's ID    │
+```
 
-# Postman Collection
+The status change is conditional (`UPDATE … WHERE status = awaiting`), so if two approvers act at the same moment, exactly one succeeds and the other gets `409 Conflict`.
 
-Check the postman collection here: https://www.postman.com/navigation-candidate-18708542/workspace/banking-transaction 
+## API
 
-# Database Design
+All routes are under `/api`. Protected routes need `Authorization: Bearer <access_token>` from `/login`.
 
-![alt text](./schema/Screenshot%202024-06-18%20at%206.19.32%E2%80%AFPM.png)
+| Method | Route | Role | Description |
+|---|---|---|---|
+| `GET` | `/corporates` | public | list corporates (used by the registration form) |
+| `POST` | `/send-otp` | public | email a registration code |
+| `POST` | `/register` | public | create a maker (`role: 1`) or approver (`role: 2`) account |
+| `POST` | `/login` | public | get an access token (valid 24 hours) |
+| `POST` | `/logout` | any | revoke the current token |
+| `GET` | `/transaction/download-template` | maker | CSV template |
+| `POST` | `/transaction/upload` | maker | submit a batch from CSV (multipart form) |
+| `GET` | `/transactions` | any | list your corporate's transactions (`status`, `start_date`, `end_date`, `page`, `per_page`) |
+| `GET` | `/transactions/stats` | any | counts per status |
+| `GET` | `/transaction/{id}` | any | transaction with its transfer rows |
+| `POST` | `/transaction/{id}/audit?action=approve\|reject` | approver | approve or reject |
+| `GET` | `/health` (no `/api` prefix) | public | health check |
 
-# Architecture Pattern
+Full request examples are in the [Postman collection](https://www.postman.com/navigation-candidate-18708542/workspace/banking-transaction).
 
-This solution is using clean architecture by uncle bob based on
-his [book](https://books.google.co.id/books/about/Clean_Architecture.html?id=uGE1DwAAQBAJ&source=kp_book_description&redir_esc=y) & [blog](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html).
+### Upload format
 
-![alt text](https://blog.cleancoder.com/uncle-bob/images/2012-08-13-the-clean-architecture/CleanArchitecture.jpg)
+```csv
+to_bank_name,to_account_no,to_account_name,transfer_amount
+BCA,1234567890,Budi,150000
+BNI,9876543210,Sari,250000
+```
 
-![alt text](./architecture.png)
+The form also takes `instruction_type` (`immediate` or `standing`), `transaction_date` (Unix seconds, for `standing`), `total_record`, and `total_amount`. The server checks the totals against the file, so a truncated or edited file is rejected.
 
-# Getting Started
+## Architecture
 
-## Prerequisites
+The code follows Uncle Bob's [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html): business rules in `domain` and `usecase` don't depend on HTTP, PostgreSQL, or Redis, which are plugged in from the outer layers.
 
-Make sure you have installed all the following prerequisites on your development machine:
+![Architecture](./architecture.png)
 
-* go version : [1.19](https://golang.org/dl/)
-* docker: https://docs.docker.com/get-docker/
+```
+cmd/http/                 entry point: wiring, routes, auth middleware
+internal/
+├── domain/               entities, business rules, repository interfaces
+├── usecase/              application logic (auth, transactions, corporates)
+├── handler/http/         HTTP handlers: parse requests, map errors to status codes
+├── repo/                 PostgreSQL implementations of the repositories
+├── infra/                database, Redis cache, JWT sessions, SMTP
+├── dto/                  request and response shapes, input validation
+└── config/               YAML config with environment overrides
+files/etc/tx-bank/        config.yaml
+schema/                   SQL schema and seed data
+```
 
-## Local Run Guides:
+### Database
 
-To clone this repo:
+![Database design](./schema/db.png)
+
+## Getting started
+
+Requires Go 1.19+, Docker, and `psql`.
 
 ```bash
 git clone https://github.com/rizanw/banking-transaction-be.git
+cd banking-transaction-be
+
+make docker-up          # PostgreSQL on :5656 and Redis on :6379
+./schema/setup.sh       # create tables and seed sample corporates
+
+export JWT_SECRET=$(openssl rand -hex 32)
+make run                # API on http://localhost:8080
 ```
 
-To set up the environment:
-
-- to run docker-compose (we need it for local postgres)
-
-```bash 
-make docker-up 
-```
-
-- to initiate db schema (please make sure the postgres is running properly)
-
-```bash 
-./schema/setup.sh
-```
-
-- to use email feature please update the config.yaml or add env vars
+Without SMTP credentials, the server prints OTP codes to its log instead of emailing them, so you can register locally right away. To send real emails:
 
 ```bash
-export EMAIL=test@mail.com 
-export EMAIL_PASSWORD=secret
+export EMAIL=you@gmail.com
+export EMAIL_PASSWORD=your-app-password
 ```
 
-To build and start the apps:
+### Configuration
 
-- build the binaries:
+Settings live in [`files/etc/tx-bank/config.yaml`](files/etc/tx-bank/config.yaml). Secrets come from environment variables:
 
-```bash 
-make build
-```
+| Variable | Description |
+|---|---|
+| `JWT_SECRET` | key for signing tokens (32+ random bytes). If unset, a random key is generated at startup and everyone is logged out on restart. |
+| `EMAIL`, `EMAIL_PASSWORD` | SMTP credentials for sending OTP codes |
 
-- start the app:
+`server.allowed_origins` restricts CORS to your frontend's origin (all origins are allowed by default).
 
-```bash 
-make run
-```
+## Known limitations
 
-## Unit Test
+This is a portfolio project, not a production banking system:
 
-To run unit test
+- **Self-assigned roles**: anyone with a corporate's account number can register as a maker or approver. A real system would have an admin invite users and assign roles.
+- **Public corporate list**: `/corporates` exposes account numbers so the registration form can offer a dropdown.
+- **Floating-point amounts**: amounts are `float64` in Go. Production money handling should use integer minor units or a decimal type end to end.
+- **No automated tests yet.**
 
-```bash
-make test
-```
+## Tech stack
 
-# Project Structure
-
-- `bin/` is directory for compiled binary
-- `cmd/` is the main program directory
-- `files/` contains app files (including db & config)
-    - `file/etc/tx-bank` contains app config files
-- `internal/` contains the whole logic of the app
-    - `internal/config` is the config of the app, has relation to files directory
-    - `internal/domain` encapsulate enterprise wide business policies including repo abstraction
-    - `internal/dto` is data transfer object, not layer, just the way to transfer object between layers
-    - `internal/handler` is application interface controller
-    - `internal/infra` is the infrastructure or framework of the app
-    - `internal/repo` is the repositories to fetch/store data of this app
-    - `internal/usecase` is layer contains application specific business rules
-- `schema/` contains sql schemas
-- `go.mod` the golang dependencies list
+Go · gorilla/mux · PostgreSQL (sqlx, lib/pq) · Redis (go-redis) · JWT (golang-jwt) · bcrypt · Docker Compose

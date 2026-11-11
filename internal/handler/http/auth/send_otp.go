@@ -25,11 +25,12 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err = mail.ParseAddress(req.Email); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	err = h.ucAuth.SendOTP(ctx, req.Email)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to send OTP", http.StatusInternalServerError)
 		return
 	}
 

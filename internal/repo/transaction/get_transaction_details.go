@@ -2,62 +2,53 @@ package transaction
 
 import (
 	"context"
+	"database/sql"
 	domain "tx-bank/internal/domain/transaction"
 
 	"github.com/google/uuid"
-	"golang.org/x/sync/errgroup"
 )
 
 const qGetTransactionDetails = `
 	SELECT 
-		"id", "transaction_id", "to_account_num", "to_account_name", "to_account_bank", "amount", "description", "status"
+		"id", "to_account_num", "to_account_name", "to_account_bank", "amount", "description", "status"
 	FROM 
 	    "transaction_details"
 	WHERE
-	    "transaction_id" = $1;
+	    "transaction_id" = $1
+	ORDER BY "created_at", "id";
 `
 
+// GetTransactionDetails returns the number of details and the details of a transaction.
 func (r *repo) GetTransactionDetails(ctx context.Context, trxID uuid.UUID) (int32, []domain.Detail, error) {
-	var (
-		eg      errgroup.Group
-		details []domain.Detail
-		total   int32
-	)
+	rows, err := r.db.QueryxContext(ctx, qGetTransactionDetails, trxID)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer rows.Close()
 
-	eg.Go(func() error {
-		rows, err := r.db.QueryxContext(ctx, qGetTransactionDetails, trxID)
-		if err != nil {
-			return err
+	details := make([]domain.Detail, 0)
+	for rows.Next() {
+		var (
+			detail      domain.Detail
+			description sql.NullString
+		)
+		if err = rows.Scan(
+			&detail.ID,
+			&detail.ToAccountNumber,
+			&detail.ToAccountName,
+			&detail.ToAccountBank,
+			&detail.Amount,
+			&description,
+			&detail.Status,
+		); err != nil {
+			return 0, nil, err
 		}
-		for rows.Next() {
-			var detail domain.Detail
-			err = rows.Scan(
-				&detail.ID,
-				&detail.ToAccountNumber,
-				&detail.ToAccountName,
-				&detail.ToAccountBank,
-				&detail.Amount,
-				&detail.Description,
-				&detail.Status,
-			)
-			if err != nil {
-				return err
-			}
-			details = append(details, detail)
-		}
-		return nil
-	})
+		detail.Description = description.String
+		details = append(details, detail)
+	}
+	if err = rows.Err(); err != nil {
+		return 0, nil, err
+	}
 
-	eg.Go(func() error {
-		if err := r.db.QueryRowxContext(
-			ctx,
-			"SELECT COUNT(*) FROM transaction_details WHERE transaction_id=$1",
-			trxID,
-		).Scan(&total); err != nil {
-			return err
-		}
-		return nil
-	})
-
-	return total, details, nil
+	return int32(len(details)), details, nil
 }

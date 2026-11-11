@@ -8,14 +8,14 @@ import (
 )
 
 type GetTransactionsRequest struct {
-	Page    int
-	PerPage int
-	Filter  FilterTransactionsRequest
+	RequesterID uuid.UUID // logged-in user; results are limited to their corporate
+	Page        int
+	PerPage     int
+	Filter      FilterTransactionsRequest
 }
 
 type FilterTransactionsRequest struct {
-	Status      transaction.Status
-	CorporateID uuid.UUID
-	StartDate   time.Time
-	EndDate     time.Time
+	Status    transaction.Status
+	StartDate time.Time
+	EndDate   time.Time
 }

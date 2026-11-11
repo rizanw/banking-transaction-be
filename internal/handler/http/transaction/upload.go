@@ -13,8 +13,7 @@ import (
 	"time"
 	dtransaction "tx-bank/internal/domain/transaction"
 	"tx-bank/internal/dto"
-
-	"github.com/google/uuid"
+	"tx-bank/internal/handler/http/httputil"
 )
 
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
@@ -28,28 +27,30 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		}
 		csvContent []dto.UploadTransactionCSV
 	)
+	defer r.Body.Close()
 
 	w.Header().Set("Content-Type", "application/json")
 
-	userID, ok := ctx.Value("user_id").(string)
+	userID, ok := httputil.UserID(r)
 	if !ok {
-		http.Error(w, "user not login", http.StatusUnauthorized)
+		httputil.Message(w, http.StatusUnauthorized, "user not login")
+		return
 	}
 
-	req, csvContent, err = parseUploadRequest(r)
+	req, csvContent, rowErrors, err := parseUploadRequest(r)
 	if err != nil {
 		resp.Message = err.Error()
-		resp.Errors = generateUploadErrorData(csvContent)
+		resp.Errors = rowErrors
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	req.MakerID = uuid.MustParse(userID)
+	req.MakerID = userID
 	err = h.ucTransaction.UploadTransaction(ctx, req, csvContent)
 	if err != nil {
 		resp.Message = err.Error()
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(resp)
 		return
 	}
@@ -62,15 +63,9 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func generateUploadErrorData(txData []dto.UploadTransactionCSV) []string {
-	errorData := make([]string, len(txData))
-	for _, txDatum := range txData {
-		errorData = append(errorData, txDatum.Message)
-	}
-	return errorData
-}
-
-func parseUploadRequest(r *http.Request) (dto.UploadTransactionRequest, []dto.UploadTransactionCSV, error) {
+// parseUploadRequest parses the form and CSV. When rows are invalid it returns
+// one message per invalid row, numbered as in the file (the header is row 1).
+func parseUploadRequest(r *http.Request) (dto.UploadTransactionRequest, []dto.UploadTransactionCSV, []string, error) {
 	var (
 		err                   error
 		csvContent            [][]string
@@ -86,14 +81,14 @@ func parseUploadRequest(r *http.Request) (dto.UploadTransactionRequest, []dto.Up
 	case dtransaction.InstructionTypeStanding:
 		isInstructionStanding = true
 	default:
-		return dto.UploadTransactionRequest{}, nil, errors.New("invalid instruction type")
+		return dto.UploadTransactionRequest{}, nil, nil, errors.New("invalid instruction type")
 	}
 
 	if isInstructionStanding {
 		instructionDateStr := r.FormValue("transaction_date")
 		instructionDateInt, err := strconv.ParseInt(instructionDateStr, 10, 64)
 		if err != nil {
-			return dto.UploadTransactionRequest{}, nil, err
+			return dto.UploadTransactionRequest{}, nil, nil, err
 		}
 		instructionDate = time.Unix(instructionDateInt, 0)
 	}
@@ -101,78 +96,69 @@ func parseUploadRequest(r *http.Request) (dto.UploadTransactionRequest, []dto.Up
 	totalRecordStr := r.FormValue("total_record")
 	totalRecord, err := strconv.Atoi(totalRecordStr)
 	if err != nil {
-		return dto.UploadTransactionRequest{}, nil, err
+		return dto.UploadTransactionRequest{}, nil, nil, err
 	}
 
 	totalAmountStr := r.FormValue("total_amount")
 	totalAmount, err := strconv.ParseFloat(totalAmountStr, 64)
 	if err != nil {
-		return dto.UploadTransactionRequest{}, nil, err
+		return dto.UploadTransactionRequest{}, nil, nil, err
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		return dto.UploadTransactionRequest{}, nil, fmt.Errorf("fail to read form named file")
+		return dto.UploadTransactionRequest{}, nil, nil, fmt.Errorf("fail to read form named file")
 	}
 	err = checkFileFormat(header, "csv")
 	if err != nil {
-		return dto.UploadTransactionRequest{}, nil, err
+		return dto.UploadTransactionRequest{}, nil, nil, err
 	}
 	csvContent, err = parseFileCSV(file, header)
 	if err != nil {
-		return dto.UploadTransactionRequest{}, nil, err
+		return dto.UploadTransactionRequest{}, nil, nil, err
 	}
 
-	isErrorValidate := false
+	if len(csvContent) < 2 {
+		return dto.UploadTransactionRequest{}, nil, nil, errors.New("csv has no transaction rows")
+	}
+
+	var rowErrors []string
 	for idx, row := range csvContent[1:] {
-		txRow := dto.UploadTransactionCSV{}
-
+		rowNum := idx + 2 // 1-based, after the header row
 		if len(row) != 4 {
-			isErrorValidate = true
-			txRow.Message = fmt.Sprintf("[row:%d] invalid column length", idx-1)
+			rowErrors = append(rowErrors, fmt.Sprintf("[row:%d] invalid column length", rowNum))
 			continue
 		}
 
-		toBankName := row[0]
-		if toBankName == "" {
-			isErrorValidate = true
-			txRow.Message = fmt.Sprintf("[row:%d] invalid to_bank_name format", idx-1)
+		txRow := dto.UploadTransactionCSV{
+			ToBankName:    strings.TrimSpace(row[0]),
+			ToAccountNum:  strings.TrimSpace(row[1]),
+			ToAccountName: strings.TrimSpace(row[2]),
+		}
+		switch {
+		case txRow.ToBankName == "":
+			rowErrors = append(rowErrors, fmt.Sprintf("[row:%d] invalid to_bank_name format", rowNum))
 			continue
-		} else {
-			txRow.ToBankName = toBankName
+		case txRow.ToAccountNum == "":
+			rowErrors = append(rowErrors, fmt.Sprintf("[row:%d] invalid to_account_no format", rowNum))
+			continue
+		case txRow.ToAccountName == "":
+			rowErrors = append(rowErrors, fmt.Sprintf("[row:%d] invalid to_account_name format", rowNum))
+			continue
 		}
 
-		toAccountNum := row[1]
-		if toAccountNum == "" {
-			isErrorValidate = true
-			txRow.Message = fmt.Sprintf("[row:%d] invalid to_account_no format", idx-1)
-			continue
-		} else {
-			txRow.ToAccountNum = toAccountNum
-		}
-
-		toAccountName := row[2]
-		if toAccountName == "" {
-			isErrorValidate = true
-			txRow.Message = fmt.Sprintf("[row:%d] invalid to_account_name format", idx-1)
-			continue
-		} else {
-			txRow.ToAccountName = toAccountName
-		}
-
-		transferAmount, err := strconv.ParseFloat(row[3], 64)
+		transferAmount, err := strconv.ParseFloat(strings.TrimSpace(row[3]), 64)
 		if err != nil || transferAmount <= 0 {
-			isErrorValidate = true
-			txRow.Message = fmt.Sprintf("[row:%d] invalid total_amount format", idx-1)
+			rowErrors = append(rowErrors, fmt.Sprintf("[row:%d] invalid transfer_amount format", rowNum))
 			continue
-		} else {
-			txRow.TransferAmount = transferAmount
 		}
+		txRow.TransferAmount = transferAmount
 
 		transactionData = append(transactionData, txRow)
 	}
-	if isErrorValidate {
-		return dto.UploadTransactionRequest{}, transactionData, errors.New("invalid csv content value")
+
+	if len(rowErrors) > 0 {
+		return dto.UploadTransactionRequest{}, nil, rowErrors, errors.New("invalid csv content value")
 	}
 
 	return dto.UploadTransactionRequest{
@@ -180,7 +166,7 @@ func parseUploadRequest(r *http.Request) (dto.UploadTransactionRequest, []dto.Up
 		TransactionDate: instructionDate,
 		TotalAmount:     totalAmount,
 		TotalRecord:     int32(totalRecord),
-	}, transactionData, nil
+	}, transactionData, nil, nil
 }
 
 func checkFileFormat(header *multipart.FileHeader, expectedFormat string) error {

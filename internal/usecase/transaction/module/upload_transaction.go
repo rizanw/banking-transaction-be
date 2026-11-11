@@ -3,6 +3,7 @@ package module
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 	dtransaction "tx-bank/internal/domain/transaction"
 	"tx-bank/internal/dto"
@@ -28,7 +29,8 @@ func (u *usecase) UploadTransaction(ctx context.Context, in dto.UploadTransactio
 	if csvTotalRecords != in.TotalRecord {
 		return errors.New("total records don't match")
 	}
-	if csvTotalAmount != in.TotalAmount {
+	// amounts are floats, so compare to the cent rather than exactly
+	if math.Abs(csvTotalAmount-in.TotalAmount) >= 0.005 {
 		return errors.New("total amount don't match")
 	}
 
@@ -42,6 +44,9 @@ func (u *usecase) UploadTransaction(ctx context.Context, in dto.UploadTransactio
 	maker, err := u.userRepo.GetUserByID(ctx, in.MakerID)
 	if err != nil {
 		return err
+	}
+	if maker == nil {
+		return errUserNotFound
 	}
 
 	// insert transaction & details

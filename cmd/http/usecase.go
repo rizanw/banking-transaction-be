@@ -18,7 +18,7 @@ type UseCase struct {
 
 func newUseCase(repo *Repo, res *infra.Resources) UseCase {
 	return UseCase{
-		Auth:        ucauth.New(res.SessionManager, repo.Otp, repo.User, repo.Corporate, res.NotificationService),
+		Auth:        ucauth.New(res.SessionManager, repo.Otp, repo.User, repo.Corporate, res.NotificationService, res.Redis),
 		Transaction: uctransaction.New(repo.Transaction, repo.User, repo.Corporate),
 		Corporate:   uccorporate.New(repo.Corporate),
 	}

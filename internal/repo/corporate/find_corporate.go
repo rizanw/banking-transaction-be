@@ -20,6 +20,7 @@ const qFindCorporate = `
 		    account_num=$1 OR id=$2;
 `
 
+// FindCorporate finds a corporate by ID or account number. It returns nil, nil when none matches.
 func (r *repo) FindCorporate(ctx context.Context, id uuid.UUID, accountNum string) (*domain.Corporate, error) {
 	var corp domain.Corporate
 
@@ -28,7 +29,10 @@ func (r *repo) FindCorporate(ctx context.Context, id uuid.UUID, accountNum strin
 		&corp.Name,
 		&corp.AccountNum,
 	)
-	if err != nil && errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
 		return nil, err
 	}
 

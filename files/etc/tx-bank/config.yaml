@@ -3,6 +3,8 @@ server:
   port: 8080
   write_timeout: 10
   read_timeout: 10
+  # allowed_origins:
+  #   - http://localhost:3000
 
 database:
   host: localhost
@@ -11,8 +13,21 @@ database:
   user: txbank
   password: txbank
 
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+# jwt.secret is read from the JWT_SECRET env var; if neither is set, a random
+# key is generated at startup (tokens are invalidated on restart).
+jwt:
+  secret: ""
+
+# SMTP credentials come from the EMAIL and EMAIL_PASSWORD env vars.
+# Without them, OTP codes are printed to the server log (local development).
 smtp_server:
   host: smtp.gmail.com
   port: 587
-  username: secret
-  password: secret
+  username: ""
+  password: ""
